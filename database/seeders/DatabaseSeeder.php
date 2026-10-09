@@ -2,27 +2,22 @@
 
 namespace Database\Seeders;
 
-use App\Models\Disciplina;
-use App\Models\User;
 use Illuminate\Database\Seeder;
 
 /**
- * Datos iniciales para desarrollo (`php artisan migrate:fresh --seed`).
- * Carga las disciplinas del centro y un usuario para poder iniciar sesión.
+ * Datos de ejemplo para desarrollo (`php artisan migrate:fresh --seed`).
+ * No carga nada por sí mismo: llama a los seeders de cada tema.
  */
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        $psicologia = Disciplina::create(['nombre' => 'Psicología']);
-        Disciplina::create(['nombre' => 'Psicopedagogía']);
-        Disciplina::create(['nombre' => 'Fonoaudiología']);
-
-        User::create([
-            'name' => 'Catalina Arnal',
-            'email' => 'catalina@andar.test',
-            'password' => 'password', // Se encripta sola (ver User::casts).
-            'disciplina_id' => $psicologia->id,
+        // El orden importa: el equipo necesita las disciplinas, los pacientes al equipo, y los mensajes a los pacientes.
+        $this->call([
+            DisciplinaSeeder::class,
+            EquipoSeeder::class,
+            PacienteSeeder::class,
+            MensajeSeeder::class,
         ]);
     }
 }

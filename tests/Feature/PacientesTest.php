@@ -9,6 +9,7 @@ use App\Models\Disciplina;
 use App\Models\Paciente;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -33,9 +34,14 @@ class PacientesTest extends TestCase
         ], $datos))->refresh();
     }
 
-    /** Abre el formulario de alta con los cuatro obligatorios ya cargados; $campos pisa los que se quieran probar. */
+    /**
+     * Abre el formulario de alta (como Dirección) con los cuatro obligatorios ya cargados;
+     * $campos pisa los que se quieran probar.
+     */
     private function formularioCompleto(array $campos = [])
     {
+        $this->entrarComoDireccion(); // Solo Dirección carga pacientes.
+
         $formulario = Livewire::test(Formulario::class);
 
         $valores = array_merge([
@@ -50,6 +56,35 @@ class PacientesTest extends TestCase
         }
 
         return $formulario;
+    }
+
+    /**
+     * Abre el formulario de edición de un paciente con la sesión de alguien de Dirección (el único rol que edita).
+     */
+    private function formularioDeEdicion(Paciente $paciente): Testable
+    {
+        $this->entrarComoDireccion();
+
+        return Livewire::test(Formulario::class, ['paciente' => $paciente]);
+    }
+
+    /**
+     * Abre la ficha de un paciente con la sesión de alguien de Dirección, que ve la de todos.
+     * (Quién más puede abrirla, y quién no, se prueba en RolesTest.)
+     */
+    private function ficha(Paciente $paciente): Testable
+    {
+        $this->entrarComoDireccion();
+
+        return Livewire::test(Ficha::class, ['paciente' => $paciente]);
+    }
+
+    /** Abre la lista de pacientes con la sesión de alguien de Dirección, que los ve a todos. */
+    private function lista(): Testable
+    {
+        $this->entrarComoDireccion();
+
+        return Livewire::test(Lista::class);
     }
 
     // ---------------------------------------------------------------- Rutas
@@ -72,32 +107,33 @@ class PacientesTest extends TestCase
             ->assertSeeLivewire(Lista::class);
     }
 
-    public function test_con_sesion_la_pantalla_de_crear_paciente_se_muestra(): void
+    public function test_direccion_ve_la_pantalla_de_crear_paciente(): void
     {
+        $this->entrarComoDireccion();
+
         // "crear" no se tiene que confundir con el id de un paciente.
-        $this->actingAs(User::factory()->create())
-            ->get('/pacientes/crear')
+        $this->get('/pacientes/crear')
             ->assertOk()
             ->assertSeeLivewire(Formulario::class)
             ->assertSee('Nuevo paciente');
     }
 
-    public function test_con_sesion_la_ficha_del_paciente_se_muestra(): void
+    public function test_direccion_ve_la_ficha_del_paciente(): void
     {
         $paciente = $this->crearPaciente();
+        $this->entrarComoDireccion();
 
-        $this->actingAs(User::factory()->create())
-            ->get("/pacientes/{$paciente->id}")
+        $this->get("/pacientes/{$paciente->id}")
             ->assertOk()
             ->assertSeeLivewire(Ficha::class);
     }
 
-    public function test_con_sesion_la_pantalla_de_editar_paciente_se_muestra(): void
+    public function test_direccion_ve_la_pantalla_de_editar_paciente(): void
     {
         $paciente = $this->crearPaciente();
+        $this->entrarComoDireccion();
 
-        $this->actingAs(User::factory()->create())
-            ->get("/pacientes/{$paciente->id}/editar")
+        $this->get("/pacientes/{$paciente->id}/editar")
             ->assertOk()
             ->assertSeeLivewire(Formulario::class)
             ->assertSee('Editar paciente');
@@ -105,12 +141,16 @@ class PacientesTest extends TestCase
 
     public function test_la_ficha_de_un_paciente_que_no_existe_da_404(): void
     {
-        $this->actingAs(User::factory()->create())->get('/pacientes/9999')->assertNotFound();
+        $this->entrarComoDireccion();
+
+        $this->get('/pacientes/9999')->assertNotFound();
     }
 
     public function test_editar_un_paciente_que_no_existe_da_404(): void
     {
-        $this->actingAs(User::factory()->create())->get('/pacientes/9999/editar')->assertNotFound();
+        $this->entrarComoDireccion();
+
+        $this->get('/pacientes/9999/editar')->assertNotFound();
     }
 
     // ---------------------------------------------------------------- Lista
@@ -121,7 +161,7 @@ class PacientesTest extends TestCase
         $this->crearPaciente(['nombre' => 'Ana', 'apellido' => 'Zapata', 'dni' => '52118304', 'activo' => false]);
         $this->crearPaciente(['nombre' => 'Bruno', 'apellido' => 'Arnal', 'dni' => '40111222', 'activo' => true]);
 
-        Livewire::test(Lista::class)
+        $this->lista()
             ->assertSeeInOrder([
                 'Arnal, Bruno', '40.111.222', 'Activo',
                 'Zapata, Ana', '52.118.304', 'Inactivo',
@@ -137,7 +177,7 @@ class PacientesTest extends TestCase
         User::factory()->create(['name' => 'Pedro Suelto']); // No atiende a nadie: no tiene que aparecer.
         $paciente->profesionales()->sync([$lucia->id, $marta->id]);
 
-        Livewire::test(Lista::class)
+        $this->lista()
             ->assertSee('Lucía Pérez')
             ->assertSee('Marta Díaz')
             ->assertDontSee('Pedro Suelto');
@@ -145,7 +185,7 @@ class PacientesTest extends TestCase
 
     public function test_sin_pacientes_la_lista_avisa_que_esta_vacia(): void
     {
-        Livewire::test(Lista::class)->assertSee('Todavía no hay pacientes cargados.');
+        $this->lista()->assertSee('Todavía no hay pacientes cargados.');
     }
 
     // ---------------------------------------------------------------- Ficha
@@ -163,7 +203,7 @@ class PacientesTest extends TestCase
             'diagnostico' => 'Retraso del lenguaje',
         ]);
 
-        $html = Livewire::test(Ficha::class, ['paciente' => $paciente])
+        $html = $this->ficha($paciente)
             ->assertSee('Ana Zapata')
             ->assertSee('Activo')
             ->assertSee('52.118.304')
@@ -184,7 +224,7 @@ class PacientesTest extends TestCase
     {
         $paciente = $this->crearPaciente(); // Solo los obligatorios.
 
-        $html = Livewire::test(Ficha::class, ['paciente' => $paciente])->html();
+        $html = $this->ficha($paciente)->html();
 
         // Una raya por cada opcional: ingreso, obra social, escuela, grado y diagnóstico.
         $this->assertSame(5, substr_count($html, '—'));
@@ -194,28 +234,35 @@ class PacientesTest extends TestCase
     {
         $paciente = $this->crearPaciente(['activo' => false]);
 
-        Livewire::test(Ficha::class, ['paciente' => $paciente])->assertSee('Inactivo');
+        $this->ficha($paciente)->assertSee('Inactivo');
     }
 
-    public function test_la_ficha_muestra_el_equipo_con_la_disciplina_de_cada_profesional(): void
+    public function test_la_ficha_muestra_el_equipo_con_las_disciplinas_de_cada_profesional_en_una_sola_etiqueta(): void
     {
         $psicologia = Disciplina::create(['nombre' => 'Psicología']);
+        $fonoaudiologia = Disciplina::create(['nombre' => 'Fonoaudiología']);
         $paciente = $this->crearPaciente();
-        $lucia = User::factory()->create(['name' => 'Lucía Pérez', 'disciplina_id' => $psicologia->id]);
+        $lucia = User::factory()->create(['name' => 'Lucía Pérez']);
+        $lucia->disciplinas()->attach([$psicologia->id, $fonoaudiologia->id]); // Tiene dos.
         $marta = User::factory()->create(['name' => 'Marta Díaz']); // Sin disciplina.
         $paciente->profesionales()->sync([$lucia->id, $marta->id]);
 
-        Livewire::test(Ficha::class, ['paciente' => $paciente])
-            ->assertSeeInOrder(['Lucía Pérez', 'Psicología'])
+        $html = $this->ficha($paciente)
+            // Una sola etiqueta al lado del nombre, con las dos separadas por " · " y en orden alfabético.
+            ->assertSeeInOrder(['Lucía Pérez', 'Fonoaudiología · Psicología'])
             ->assertSee('Marta Díaz')
-            ->assertDontSee('Todavía no tiene profesionales asignados.');
+            ->assertDontSee('Todavía no tiene profesionales asignados.')
+            ->html();
+
+        // El separador aparece una sola vez: Marta no tiene disciplinas, así que no lleva etiqueta (ni una vacía).
+        $this->assertSame(1, substr_count($html, ' · '));
     }
 
     public function test_la_ficha_avisa_cuando_el_paciente_no_tiene_equipo(): void
     {
         $paciente = $this->crearPaciente();
 
-        Livewire::test(Ficha::class, ['paciente' => $paciente])
+        $this->ficha($paciente)
             ->assertSee('Todavía no tiene profesionales asignados.');
     }
 
@@ -287,6 +334,8 @@ class PacientesTest extends TestCase
 
     public function test_al_crear_no_se_muestra_la_casilla_de_activo(): void
     {
+        $this->entrarComoDireccion();
+
         Livewire::test(Formulario::class)->assertDontSee('destildar para darlo de baja');
     }
 
@@ -346,9 +395,11 @@ class PacientesTest extends TestCase
     {
         $this->crearPaciente(['dni' => '52118304']);
 
+        // El DNI está cifrado, así que el control no es la regla "unique" sino una comparación hecha en el formulario.
         $this->formularioCompleto(['nombre' => 'Otra', 'dni' => '52118304'])
             ->call('guardar')
-            ->assertHasErrors(['dni' => 'unique']);
+            ->assertHasErrors('dni')
+            ->assertSee('Ya existe un paciente con ese DNI.');
 
         $this->assertDatabaseCount('pacientes', 1);
     }
@@ -360,7 +411,8 @@ class PacientesTest extends TestCase
         // Sin quitarle los puntos, "52.118.304" pasaría como un DNI distinto.
         $this->formularioCompleto(['nombre' => 'Otra', 'dni' => '52.118.304'])
             ->call('guardar')
-            ->assertHasErrors(['dni' => 'unique']);
+            ->assertHasErrors('dni')
+            ->assertSee('Ya existe un paciente con ese DNI.');
 
         $this->assertDatabaseCount('pacientes', 1);
     }
@@ -400,7 +452,7 @@ class PacientesTest extends TestCase
         User::factory()->create(); // Existe pero no es del equipo.
         $paciente->profesionales()->sync([$lucia->id]);
 
-        Livewire::test(Formulario::class, ['paciente' => $paciente])
+        $this->formularioDeEdicion($paciente)
             ->assertSet('pacienteId', $paciente->id)
             ->assertSet('nombre', 'Ana')
             ->assertSet('apellido', 'Zapata')
@@ -423,7 +475,7 @@ class PacientesTest extends TestCase
         $paciente = $this->crearPaciente();
 
         // null se convierte en '' para que los campos del formulario queden en blanco.
-        Livewire::test(Formulario::class, ['paciente' => $paciente])
+        $this->formularioDeEdicion($paciente)
             ->assertSet('fecha_ingreso', '')
             ->assertSet('obra_social', '')
             ->assertSet('escuela', '')
@@ -437,7 +489,7 @@ class PacientesTest extends TestCase
     {
         $paciente = $this->crearPaciente();
 
-        Livewire::test(Formulario::class, ['paciente' => $paciente])
+        $this->formularioDeEdicion($paciente)
             ->set('nombre', 'Ana María')
             ->set('apellido', 'Zapata Ruiz')
             ->set('dni', '40.111.222')
@@ -462,8 +514,8 @@ class PacientesTest extends TestCase
     {
         $paciente = $this->crearPaciente();
 
-        // La regla de único no cuenta al propio paciente que se está editando.
-        Livewire::test(Formulario::class, ['paciente' => $paciente])
+        // El control de DNI repetido no cuenta al propio paciente que se está editando.
+        $this->formularioDeEdicion($paciente)
             ->set('nombre', 'Ana María')
             ->call('guardar')
             ->assertHasNoErrors();
@@ -480,11 +532,12 @@ class PacientesTest extends TestCase
         $this->crearPaciente(['dni' => '52118304']);
         $otro = $this->crearPaciente(['nombre' => 'Bruno', 'apellido' => 'Arnal', 'dni' => '40111222']);
 
-        // La regla de único solo ignora al que se edita, no a los demás.
-        Livewire::test(Formulario::class, ['paciente' => $otro])
+        // El control de DNI repetido solo ignora al que se edita, no a los demás.
+        $this->formularioDeEdicion($otro)
             ->set('dni', '52.118.304')
             ->call('guardar')
-            ->assertHasErrors(['dni' => 'unique']);
+            ->assertHasErrors('dni')
+            ->assertSee('Ya existe un paciente con ese DNI.');
 
         $this->assertSame('40111222', $otro->fresh()->dni);
     }
@@ -498,7 +551,7 @@ class PacientesTest extends TestCase
         $paciente->profesionales()->sync([$lucia->id, $marta->id]);
 
         // Se destilda a Lucía, queda Marta y se tilda a Pedro.
-        Livewire::test(Formulario::class, ['paciente' => $paciente])
+        $this->formularioDeEdicion($paciente)
             ->set('equipo', [(string) $marta->id, (string) $pedro->id])
             ->call('guardar')
             ->assertHasNoErrors();
@@ -513,7 +566,7 @@ class PacientesTest extends TestCase
     {
         $paciente = $this->crearPaciente();
 
-        Livewire::test(Formulario::class, ['paciente' => $paciente])
+        $this->formularioDeEdicion($paciente)
             ->set('activo', false)
             ->call('guardar')
             ->assertHasNoErrors();
@@ -527,7 +580,7 @@ class PacientesTest extends TestCase
     {
         $paciente = $this->crearPaciente(['obra_social' => 'OSDE', 'fecha_ingreso' => '2024-04-02']);
 
-        Livewire::test(Formulario::class, ['paciente' => $paciente])
+        $this->formularioDeEdicion($paciente)
             ->set('obra_social', '')
             ->set('fecha_ingreso', '')
             ->call('guardar')

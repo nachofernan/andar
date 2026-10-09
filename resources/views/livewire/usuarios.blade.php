@@ -19,17 +19,32 @@
                 @error('email') <span class="text-[13px] font-normal text-red-600">{{ $message }}</span> @enderror
             </label>
 
-            <label class="grid content-start gap-1.5 text-sm font-medium">Disciplina
-                <select wire:model="disciplina_id"
+
+            {{-- Rol: define qué puede hacer en la app (ver docs/roles.md). --}}
+            <label class="grid content-start gap-1.5 text-sm font-medium">Rol
+                <select wire:model="rol"
                     class="rounded-xl border-[1.5px] border-line bg-white px-3.5 py-[11px] outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15">
-                    <option value="">Sin disciplina</option>
-                    @foreach ($disciplinas as $disciplina)
-                        <option value="{{ $disciplina->id }}">{{ $disciplina->nombre }}</option>
+                    @foreach ($roles as $clave => $nombre)
+                        <option value="{{ $clave }}">{{ $nombre }}</option>
                     @endforeach
                 </select>
-                @error('disciplina_id') <span class="text-[13px] font-normal text-red-600">{{ $message }}</span> @enderror
+                @error('rol') <span class="text-[13px] font-normal text-red-600">{{ $message }}</span> @enderror
             </label>
         </div>
+
+        {{-- Disciplinas: una casilla por cada una. Se pueden tildar varias, o ninguna. --}}
+        <fieldset class="grid gap-2">
+            <legend class="mb-2 text-sm font-medium">Disciplinas <span class="font-normal text-muted">(puede tener varias o ninguna)</span></legend>
+            <div class="grid gap-2 sm:grid-cols-3">
+                @foreach ($todasLasDisciplinas as $disciplina)
+                    <label wire:key="disciplina-{{ $disciplina->id }}" class="flex items-center gap-2 text-sm">
+                        <input type="checkbox" wire:model="disciplinas" value="{{ $disciplina->id }}">
+                        {{ $disciplina->nombre }}
+                    </label>
+                @endforeach
+            </div>
+            @error('disciplinas.*') <span class="text-[13px] text-red-600">{{ $message }}</span> @enderror
+        </fieldset>
 
         @unless ($editandoId)
             <p class="text-sm text-muted">El usuario nuevo entra con la contraseña <b>{{ \App\Livewire\Usuarios::CONTRASENA_INICIAL }}</b>.</p>
@@ -50,7 +65,8 @@
                 <tr>
                     <th class="px-4 py-3 font-medium">Nombre</th>
                     <th class="px-4 py-3 font-medium">Email</th>
-                    <th class="px-4 py-3 font-medium">Disciplina</th>
+                    <th class="px-4 py-3 font-medium">Rol</th>
+                    <th class="px-4 py-3 font-medium">Disciplinas</th>
                     <th class="px-4 py-3"></th>
                 </tr>
             </thead>
@@ -60,7 +76,9 @@
                     <tr wire:key="usuario-{{ $usuario->id }}" class="border-t border-line">
                         <td class="px-4 py-3 font-medium">{{ $usuario->name }}</td>
                         <td class="px-4 py-3 text-muted">{{ $usuario->email }}</td>
-                        <td class="px-4 py-3 text-muted">{{ $usuario->disciplina?->nombre ?? '—' }}</td>
+                        <td class="px-4 py-3 text-muted">{{ $roles[$usuario->rol] ?? '—' }}</td>
+                        {{-- Los nombres separados por coma, o una raya si no tiene ninguna. --}}
+                        <td class="px-4 py-3 text-muted">{{ $usuario->disciplinas->pluck('nombre')->join(', ') ?: '—' }}</td>
                         <td class="px-4 py-3 text-right">
                             <button type="button" wire:click="editar({{ $usuario->id }})" class="cursor-pointer font-semibold text-brand hover:text-brand-dark">Editar</button>
                         </td>

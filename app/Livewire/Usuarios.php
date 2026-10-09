@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Livewire\Concerns\SoloDireccion;
 use App\Models\Disciplina;
 use App\Models\User;
 use Illuminate\Validation\Rule;
@@ -15,6 +16,8 @@ use Livewire\Component;
  */
 class Usuarios extends Component
 {
+    use SoloDireccion; // Solo Dirección puede usar esta pantalla (ver docs/roles.md).
+
     /** Contraseña con la que nace todo usuario nuevo. Provisorio, hasta que exista el cambio de contraseña. */
     public const CONTRASENA_INICIAL = 'password';
 
@@ -23,8 +26,11 @@ class Usuarios extends Component
 
     public string $email = '';
 
-    // Texto y no número porque el desplegable manda '' cuando se elige "Sin disciplina".
-    public string $disciplina_id = '';
+    // Uno de User::ROLES. Un usuario nuevo arranca como profesional.
+    public string $rol = 'profesional';
+
+    /** @var array<int, string> Ids de las disciplinas tildadas. Vacío = sin disciplina. */
+    public array $disciplinas = [];
 
     // Id del usuario que se está editando. null = se está creando uno nuevo.
     public ?int $editandoId = null;
@@ -40,27 +46,51 @@ class Usuarios extends Component
                 'name' => ['required', 'max:255'],
                 // Único en la tabla, sin contar al usuario que se está editando.
                 'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($this->editandoId)],
-                'disciplina_id' => ['nullable', 'exists:disciplinas,id'],
+                'rol' => ['required', Rule::in(array_keys(User::ROLES)), function (string $campo, mixed $valor, \Closure $fallar) {
+                    // El centro no puede quedar sin nadie de Dirección: nadie podría cargar usuarios ni pacientes.
+                    if ($valor !== 'direccion' && $this->esLaUnicaDireccion()) {
+                        $fallar('Es la única persona de Dirección: antes hay que darle ese rol a otra.');
+                    }
+                }],
+                'disciplinas' => ['array'],
+                'disciplinas.*' => ['exists:disciplinas,id'],
             ],
             [
                 'required' => 'Este campo es obligatorio.',
                 'max' => 'El texto es demasiado largo.',
                 'email' => 'Ingresá un email válido.',
                 'unique' => 'Ya existe un usuario con ese email.',
-                'exists' => 'Elegí una disciplina de la lista.',
+                'rol.in' => 'Elegí un rol de la lista.',
+                'disciplinas.*.exists' => 'Una de las disciplinas elegidas no existe.',
             ],
         );
 
-        $datos['disciplina_id'] = $datos['disciplina_id'] ?: null; // '' = sin disciplina.
+        // El rol y las disciplinas no son columnas del usuario: se guardan aparte.
+        $rol = $datos['rol'];
+        $disciplinas = $datos['disciplinas'];
+        unset($datos['rol'], $datos['disciplinas']);
 
         if ($this->editandoId) {
-            // Al editar no se toca la contraseña.
-            User::findOrFail($this->editandoId)->update($datos);
+            $usuario = User::findOrFail($this->editandoId);
+            $usuario->update($datos); // Al editar no se toca la contraseña.
         } else {
-            User::create($datos + ['password' => self::CONTRASENA_INICIAL]); // Se encripta sola (ver User::casts).
+            $usuario = User::create($datos + ['password' => self::CONTRASENA_INICIAL]); // Se encripta sola (ver User::casts).
         }
 
+        // syncRoles deja al usuario con ese único rol.
+        $usuario->syncRoles($rol);
+        // sync deja exactamente las tildadas: agrega las nuevas y saca las destildadas.
+        $usuario->disciplinas()->sync($disciplinas);
+
         $this->cancelar();
+    }
+
+    /** ¿El usuario que se está editando es hoy la única persona con rol Dirección? */
+    private function esLaUnicaDireccion(): bool
+    {
+        return $this->editandoId !== null
+            && User::findOrFail($this->editandoId)->esDireccion()
+            && User::role('direccion')->count() === 1;
     }
 
     /** Carga un usuario en el formulario para editarlo. */
@@ -72,7 +102,9 @@ class Usuarios extends Component
         $this->editandoId = $usuario->id;
         $this->name = $usuario->name;
         $this->email = $usuario->email;
-        $this->disciplina_id = (string) $usuario->disciplina_id;
+        $this->rol = $usuario->rol ?? 'profesional';
+        // Como texto, porque así los manda el navegador y así se comparan con las casillas.
+        $this->disciplinas = $usuario->disciplinas->pluck('id')->map(fn ($id) => (string) $id)->all();
     }
 
     /** Vacía el formulario y lo deja listo para crear uno nuevo. */
@@ -85,9 +117,11 @@ class Usuarios extends Component
     public function render()
     {
         return view('livewire.usuarios', [
-            // with('disciplina') trae la disciplina de todos en una sola consulta.
-            'usuarios' => User::with('disciplina')->orderBy('name')->get(),
-            'disciplinas' => Disciplina::orderBy('nombre')->get(), // Para el desplegable.
+            // with(...) trae las disciplinas y el rol de todos en una sola consulta cada uno.
+            'usuarios' => User::with('disciplinas', 'roles')->orderBy('name')->get(),
+            // Para las casillas. No se llama "disciplinas" porque ese nombre ya lo usa la propiedad de arriba.
+            'todasLasDisciplinas' => Disciplina::orderBy('nombre')->get(),
+            'roles' => User::ROLES, // Para el desplegable.
         ]);
     }
 }

@@ -2,9 +2,9 @@
 
 namespace App\Livewire\Pacientes;
 
+use App\Livewire\Concerns\SoloDireccion;
 use App\Models\Paciente;
 use App\Models\User;
-use Illuminate\Validation\Rule;
 use Livewire\Component;
 
 /**
@@ -15,6 +15,8 @@ use Livewire\Component;
  */
 class Formulario extends Component
 {
+    use SoloDireccion; // Solo Dirección carga y edita pacientes y arma sus equipos (ver docs/roles.md).
+
     // Id del paciente que se está editando. null = se está creando uno nuevo.
     public ?int $pacienteId = null;
 
@@ -78,8 +80,15 @@ class Formulario extends Component
             [
                 'nombre' => ['required', 'max:255'],
                 'apellido' => ['required', 'max:255'],
-                // Único en la tabla, sin contar al paciente que se está editando.
-                'dni' => ['required', 'max:20', Rule::unique('pacientes', 'dni')->ignore($this->pacienteId)],
+                // No se puede repetir. Como el DNI está cifrado, la base no puede compararlo:
+                // se traen los demás pacientes (sin contar al que se está editando) y se compara acá, ya descifrado.
+                'dni' => ['required', 'max:20', function (string $campo, mixed $valor, \Closure $fallar) {
+                    $repetido = Paciente::where('id', '!=', $this->pacienteId ?? 0)->get()->contains('dni', $valor);
+
+                    if ($repetido) {
+                        $fallar('Ya existe un paciente con ese DNI.');
+                    }
+                }],
                 'fecha_nacimiento' => ['required', 'date', 'before_or_equal:today'],
                 'fecha_ingreso' => ['nullable', 'date'],
                 'obra_social' => ['nullable', 'max:255'],
@@ -94,7 +103,6 @@ class Formulario extends Component
                 'required' => 'Este campo es obligatorio.',
                 'max' => 'El texto es demasiado largo.',
                 'date' => 'Ingresá una fecha válida.',
-                'dni.unique' => 'Ya existe un paciente con ese DNI.',
                 'fecha_nacimiento.before_or_equal' => 'La fecha de nacimiento no puede ser futura.',
                 'equipo.*.exists' => 'Uno de los profesionales elegidos no existe.',
             ],
@@ -122,7 +130,7 @@ class Formulario extends Component
     {
         return view('livewire.pacientes.formulario', [
             // Todos los usuarios, para las casillas del equipo.
-            'usuarios' => User::with('disciplina')->orderBy('name')->get(),
+            'usuarios' => User::with('disciplinas')->orderBy('name')->get(),
         ]);
     }
 }

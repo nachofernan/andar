@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Livewire\Concerns\SoloDireccion;
 use App\Models\Disciplina;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
@@ -14,6 +15,8 @@ use Livewire\Component;
  */
 class Disciplinas extends Component
 {
+    use SoloDireccion; // Solo Dirección puede usar esta pantalla (ver docs/roles.md).
+
     // Conectada al input de la vista con wire:model.
     public string $nombre = '';
 

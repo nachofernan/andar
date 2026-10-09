@@ -45,7 +45,7 @@ Además se pueden usar todas las clases estándar de Tailwind (`text-red-600`, `
 Para sumar un link al menú, agregarlo a la lista del `@foreach` de la barra (nombre de la ruta => texto).
 
 - Las pantallas Livewire lo usan solas.
-- Las vistas comunes lo usan envolviendo su contenido en `<x-layouts::app> ... </x-layouts::app>` (ver `resources/views/inicio.blade.php`).
+- Una vista común (que no sea de Livewire) lo usaría envolviendo su contenido en `<x-layouts::app> ... </x-layouts::app>`. Hoy no hay ninguna: todas las pantallas son de Livewire.
 
 ## Tests
 

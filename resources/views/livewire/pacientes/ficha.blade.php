@@ -1,4 +1,4 @@
-{{-- Vista de App\Livewire\Pacientes\Ficha: datos del paciente y su equipo. --}}
+{{-- Vista de App\Livewire\Pacientes\Ficha: datos del paciente, su equipo y el historial de mensajes. --}}
 <div class="grid gap-4">
     <div class="flex flex-wrap items-center justify-between gap-4">
         <div>
@@ -12,7 +12,10 @@
                 @endif
             </h1>
         </div>
-        <a href="{{ route('pacientes.editar', $paciente) }}" class="rounded-xl bg-brand px-4 py-2.5 font-semibold text-white transition-colors hover:bg-brand-dark">Editar</a>
+        {{-- Solo Dirección edita pacientes. --}}
+        @if (auth()->user()->esDireccion())
+            <a href="{{ route('pacientes.editar', $paciente) }}" class="rounded-xl bg-brand px-4 py-2.5 font-semibold text-white transition-colors hover:bg-brand-dark">Editar</a>
+        @endif
     </div>
 
     {{-- Datos. Los opcionales que están vacíos se muestran con una raya. --}}
@@ -55,14 +58,18 @@
         <h2 class="font-semibold">Equipo</h2>
 
         @forelse ($paciente->profesionales as $profesional)
-            <div class="flex items-center gap-3 text-sm">
+            <div class="flex flex-wrap items-center gap-2 text-sm">
                 <span class="font-medium">{{ $profesional->name }}</span>
-                @if ($profesional->disciplina)
-                    <span class="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand">{{ $profesional->disciplina->nombre }}</span>
+                {{-- Una sola etiqueta con todas sus disciplinas, separadas por un punto. Si no tiene ninguna, no se muestra. --}}
+                @if ($profesional->disciplinas->isNotEmpty())
+                    <span class="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand">{{ $profesional->disciplinas->pluck('nombre')->join(' · ') }}</span>
                 @endif
             </div>
         @empty
             <p class="text-sm text-muted">Todavía no tiene profesionales asignados.</p>
         @endforelse
     </div>
+
+    {{-- Historial de mensajes del equipo: es otro componente (App\Livewire\Pacientes\Mensajes). --}}
+    <livewire:pacientes.mensajes :paciente="$paciente" />
 </div>

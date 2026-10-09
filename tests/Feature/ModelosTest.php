@@ -5,9 +5,9 @@ namespace Tests\Feature;
 use App\Models\Disciplina;
 use App\Models\Paciente;
 use App\Models\User;
-use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /** Pruebas de los modelos Disciplina y Paciente y de sus relaciones con los profesionales. */
@@ -31,24 +31,34 @@ class ModelosTest extends TestCase
         ], $datos));
     }
 
-    public function test_un_profesional_pertenece_a_una_disciplina(): void
+    public function test_un_profesional_puede_tener_varias_disciplinas(): void
     {
-        $disciplina = Disciplina::create(['nombre' => 'Psicología']);
-        $profesional = User::factory()->create(['disciplina_id' => $disciplina->id]);
+        $psicologia = Disciplina::create(['nombre' => 'Psicología']);
+        $fonoaudiologia = Disciplina::create(['nombre' => 'Fonoaudiología']);
+        $profesional = User::factory()->create();
 
-        $this->assertTrue($profesional->disciplina->is($disciplina));
-        $this->assertTrue($disciplina->profesionales->contains($profesional));
+        $profesional->disciplinas()->attach([$psicologia->id, $fonoaudiologia->id]);
+
+        // Salen por orden alfabético, no por el orden en que se cargaron.
+        $this->assertSame(['Fonoaudiología', 'Psicología'], $profesional->disciplinas->pluck('nombre')->all());
+        // La relación también se ve desde el lado de cada disciplina.
+        $this->assertTrue($psicologia->profesionales->contains($profesional));
+        $this->assertTrue($fonoaudiologia->profesionales->contains($profesional));
     }
 
-    public function test_al_borrar_una_disciplina_el_profesional_queda_sin_disciplina(): void
+    public function test_al_borrar_una_disciplina_al_profesional_se_le_quita_esa_y_conserva_las_otras(): void
     {
-        $disciplina = Disciplina::create(['nombre' => 'Fonoaudiología']);
-        $profesional = User::factory()->create(['disciplina_id' => $disciplina->id]);
+        $psicologia = Disciplina::create(['nombre' => 'Psicología']);
+        $fonoaudiologia = Disciplina::create(['nombre' => 'Fonoaudiología']);
+        $profesional = User::factory()->create();
+        $profesional->disciplinas()->attach([$psicologia->id, $fonoaudiologia->id]);
 
-        $disciplina->delete();
+        $fonoaudiologia->delete();
 
-        // El profesional no se borra: solo se le vacía la disciplina (nullOnDelete).
-        $this->assertNull($profesional->fresh()->disciplina_id);
+        // El profesional no se borra: solo se borra el vínculo con esa disciplina (cascadeOnDelete).
+        $this->assertNotNull($profesional->fresh());
+        $this->assertSame(['Psicología'], $profesional->fresh()->disciplinas->pluck('nombre')->all());
+        $this->assertDatabaseCount('disciplina_user', 1);
     }
 
     public function test_un_paciente_puede_tener_varios_profesionales(): void
@@ -64,13 +74,32 @@ class ModelosTest extends TestCase
         $this->assertTrue($psicologa->pacientes->contains($paciente));
     }
 
-    public function test_no_se_puede_repetir_el_dni_de_un_paciente(): void
+    public function test_el_dni_y_el_diagnostico_se_guardan_cifrados_y_el_modelo_los_descifra(): void
     {
-        $this->crearPaciente(['dni' => '50111222']);
+        $this->crearPaciente(['dni' => '50111222', 'diagnostico' => 'Retraso del lenguaje']);
 
-        $this->expectException(QueryException::class);
+        // La fila cruda, sin pasar por el modelo: es lo que vería alguien que abre el archivo de la base.
+        $fila = DB::table('pacientes')->first();
 
-        $this->crearPaciente(['nombre' => 'Ana', 'dni' => '50111222']);
+        $this->assertNotSame('50111222', $fila->dni);
+        $this->assertStringNotContainsString('50111222', $fila->dni);
+        $this->assertNotSame('Retraso del lenguaje', $fila->diagnostico);
+        $this->assertStringNotContainsString('Retraso del lenguaje', $fila->diagnostico);
+
+        // Leído por el modelo vuelve el texto original.
+        $paciente = Paciente::first();
+
+        $this->assertSame('50111222', $paciente->dni);
+        $this->assertSame('Retraso del lenguaje', $paciente->diagnostico);
+    }
+
+    public function test_un_diagnostico_vacio_queda_en_null_y_no_se_cifra(): void
+    {
+        $this->crearPaciente(); // Sin diagnóstico.
+
+        // El cifrado no tiene que convertir el null en un texto cifrado.
+        $this->assertNull(DB::table('pacientes')->first()->diagnostico);
+        $this->assertNull(Paciente::first()->diagnostico);
     }
 
     public function test_un_paciente_nuevo_queda_activo_por_defecto(): void

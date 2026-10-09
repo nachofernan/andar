@@ -16,13 +16,15 @@ return new class extends Migration
             $table->id();
             $table->string('nombre');
             $table->string('apellido');
-            $table->string('dni')->unique(); // Texto y no número, para no perder ceros ni puntos.
+            // Se guarda cifrado (ver docs/cifrado.md), por eso es "text": el texto cifrado es mucho más largo que el DNI.
+            // No lleva "unique" porque el mismo DNI cifrado dos veces da textos distintos: que no se repita lo controla el formulario.
+            $table->text('dni');
             $table->date('fecha_nacimiento');
             $table->date('fecha_ingreso')->nullable(); // Cuándo empezó a venir al espacio.
             $table->string('obra_social')->nullable();
             $table->string('escuela')->nullable();
             $table->string('grado')->nullable();
-            $table->text('diagnostico')->nullable();
+            $table->text('diagnostico')->nullable(); // Se guarda cifrado (ver docs/cifrado.md).
             $table->boolean('activo')->default(true); // false = dado de baja, sin borrarlo.
             $table->timestamps();
         });

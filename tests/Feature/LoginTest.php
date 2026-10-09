@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Livewire\Inicio;
 use App\Livewire\Login;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -27,8 +28,8 @@ class LoginTest extends TestCase
     {
         $user = User::factory()->create(['name' => 'Catalina Arnal']);
 
-        // Confirma que la vista inicio renderiza completa con el layout <x-layouts::app>.
-        $this->actingAs($user)->get('/')->assertOk()->assertSee('Hola, Catalina Arnal');
+        // El inicio es un componente Livewire (App\Livewire\Inicio): confirma que renderiza completo, con el menú.
+        $this->actingAs($user)->get('/')->assertOk()->assertSeeLivewire(Inicio::class)->assertSee('Hola, Catalina Arnal');
     }
 
     public function test_login_correcto_lleva_al_inicio(): void

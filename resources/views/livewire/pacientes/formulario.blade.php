@@ -71,8 +71,8 @@
                     <label wire:key="usuario-{{ $usuario->id }}" class="flex items-center gap-2 text-sm">
                         <input type="checkbox" wire:model="equipo" value="{{ $usuario->id }}">
                         {{ $usuario->name }}
-                        @if ($usuario->disciplina)
-                            <span class="text-muted">· {{ $usuario->disciplina->nombre }}</span>
+                        @if ($usuario->disciplinas->isNotEmpty())
+                            <span class="text-muted">· {{ $usuario->disciplinas->pluck('nombre')->join(', ') }}</span>
                         @endif
                     </label>
                 @endforeach

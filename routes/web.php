@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\AdjuntoController;
 use App\Livewire\Disciplinas;
+use App\Livewire\Inicio;
 use App\Livewire\Login;
 use App\Livewire\Pacientes;
 use App\Livewire\Usuarios;
@@ -12,17 +14,21 @@ Route::livewire('/login', Login::class)->name('login')->middleware('guest');
 
 // Todo lo de acá adentro exige sesión iniciada (si no, redirige a /login).
 Route::middleware('auth')->group(function () {
-    Route::view('/', 'inicio')->name('inicio');
+    Route::livewire('/', Inicio::class)->name('inicio');
 
-    // Por ahora entra cualquier usuario con sesión; se restringe cuando haya roles.
+    // Solo para Dirección. El control no está acá sino en cada componente (use SoloDireccion; ver docs/roles.md).
     Route::livewire('/disciplinas', Disciplinas::class)->name('disciplinas');
     Route::livewire('/usuarios', Usuarios::class)->name('usuarios');
 
     // Pacientes. "crear" va antes que "{paciente}" para que no se confunda con un id.
+    // Quién ve qué (según rol y equipo) lo controla cada componente; crear y editar son solo de Dirección.
     Route::livewire('/pacientes', Pacientes\Lista::class)->name('pacientes');
     Route::livewire('/pacientes/crear', Pacientes\Formulario::class)->name('pacientes.crear');
     Route::livewire('/pacientes/{paciente}', Pacientes\Ficha::class)->name('pacientes.ver');
     Route::livewire('/pacientes/{paciente}/editar', Pacientes\Formulario::class)->name('pacientes.editar');
+
+    // Descarga de un archivo adjunto a un mensaje. El control de quién puede bajarlo está en el controlador.
+    Route::get('/adjuntos/{media}', AdjuntoController::class)->name('adjuntos.descargar');
 
     Route::post('/logout', function () {
         Auth::logout();

@@ -23,9 +23,24 @@
                 </a>
 
                 {{-- Menú. El link de la pantalla actual (o de sus subpáginas, ej. pacientes.ver) se marca en violeta. --}}
+                @php
+                    // Total de mensajes sin leer del usuario, para el globito de "Pacientes" (ver User::mensajesSinLeer).
+                    $sinLeer = auth()->user()->mensajesSinLeer()->sum();
+                @endphp
                 <nav class="flex gap-4 text-sm font-medium">
-                    @foreach (['inicio' => 'Inicio', 'pacientes' => 'Pacientes', 'disciplinas' => 'Disciplinas', 'usuarios' => 'Usuarios'] as $ruta => $texto)
-                        <a href="{{ route($ruta) }}" class="{{ request()->routeIs($ruta, $ruta.'.*') ? 'text-brand' : 'text-muted hover:text-brand' }}">{{ $texto }}</a>
+                    @php
+                        // Disciplinas y Usuarios son solo para Dirección: a un profesional no se le muestran.
+                        $menu = ['inicio' => 'Inicio', 'pacientes' => 'Pacientes']
+                            + (auth()->user()->esDireccion() ? ['disciplinas' => 'Disciplinas', 'usuarios' => 'Usuarios'] : []);
+                    @endphp
+                    @foreach ($menu as $ruta => $texto)
+                        <a href="{{ route($ruta) }}" class="{{ request()->routeIs($ruta, $ruta.'.*') ? 'text-brand' : 'text-muted hover:text-brand' }}">
+                            {{ $texto }}
+                            {{-- Globito con la cantidad de mensajes sin leer. Si no hay ninguno, no aparece. --}}
+                            @if ($ruta === 'pacientes' && $sinLeer > 0)
+                                <span class="rounded-full bg-brand px-1.5 py-0.5 text-xs font-semibold text-white" title="Mensajes sin leer">{{ $sinLeer }}</span>
+                            @endif
+                        </a>
                     @endforeach
                 </nav>
 

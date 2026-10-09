@@ -34,6 +34,25 @@ class UserFactory extends Factory
     }
 
     /**
+     * Todo usuario tiene un rol: el que se crea con la factory (en los tests) nace como "profesional",
+     * salvo que se pida ->direccion().
+     */
+    public function configure(): static
+    {
+        return $this->afterCreating(function (User $usuario) {
+            if (! $usuario->roles()->exists()) {
+                $usuario->assignRole('profesional');
+            }
+        });
+    }
+
+    /** Crea al usuario con rol Dirección: User::factory()->direccion()->create(). */
+    public function direccion(): static
+    {
+        return $this->afterCreating(fn (User $usuario) => $usuario->syncRoles('direccion'));
+    }
+
+    /**
      * Indicate that the model's email address should be unverified.
      */
     public function unverified(): static

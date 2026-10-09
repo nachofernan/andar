@@ -9,7 +9,7 @@ Inicio y cierre de sesión con email y contraseña. No hay registro público ni 
 3. Al enviar el formulario, Livewire llama al método `entrar()`, que valida los campos y usa `Auth::attempt()` para comparar con la base.
    - Si falla: error "Email o contraseña incorrectos".
    - Si sale bien: renueva la sesión y redirige a donde quería ir (o a `/`).
-4. `/` (ruta `inicio`) es una página provisoria: "Hola, nombre".
+4. `/` (ruta `inicio`) es la página de inicio: saluda y muestra en qué pacientes hay mensajes sin leer (ver `docs/mensajes.md`).
 5. El botón **Salir** está en la barra superior, en todas las pantallas. Hace un `POST /logout`: cierra y destruye la sesión y vuelve al login.
 6. Si ya hay sesión y se entra a `/login`, el middleware `guest` lo manda al inicio.
 
@@ -21,13 +21,13 @@ Inicio y cierre de sesión con email y contraseña. No hay registro público ni 
 | `app/Livewire/Login.php` | Lógica del login |
 | `resources/views/livewire/login.blade.php` | Formulario |
 | `resources/views/layouts/app.blade.php` | Marco HTML de todas las pantallas. Con sesión muestra la barra con el menú y el botón Salir |
-| `resources/views/inicio.blade.php` | Página provisoria posterior al login |
+| `app/Livewire/Inicio.php` y `resources/views/livewire/inicio.blade.php` | Página de inicio, posterior al login |
 | `resources/css/app.css` | Colores y fuente de la app. El resto del estilo son clases de Tailwind en cada vista (ver `docs/estilos.md`) |
 | `tests/Feature/LoginTest.php` | Pruebas |
 
 ## Spatie Permission
 
-Está instalado (migración y `config/permission.php` publicados, `User` usa `HasRoles`), pero todavía no se usa: no hay roles ni permisos creados. Se definen en el próximo paso que lo requiera.
+Es el paquete con el que están hechos los roles (Dirección y Profesional). Qué puede hacer cada uno: `docs/roles.md`.
 
 ## Login precargado (provisorio)
 
@@ -35,4 +35,4 @@ Para probar más rápido, el formulario arranca con el email y la contraseña de
 
 ## Usuarios
 
-Se crean a mano o por seeder. Ejemplo de desarrollo: `catalina@andar.test` / `password`.
+Los crea Dirección desde la pantalla Usuarios, o el seeder. Ejemplos de desarrollo: `catalina@andar.test` (Dirección) y `paula@andar.test` (Profesional), los dos con `password`.
