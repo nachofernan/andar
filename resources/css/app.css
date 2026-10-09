@@ -1,0 +1,27 @@
+/*
+ * Estilos de Andar. Se usa Tailwind: las clases se escriben directo en las vistas
+ * y este archivo solo define los colores y la fuente de la app (ver docs/estilos.md).
+ */
+@import 'tailwindcss';
+
+/* Dónde busca Tailwind las clases que se usan, para incluir solo esas en el CSS final. */
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+/*
+ * Colores de la marca. Cada uno genera sus clases: --color-brand → bg-brand, text-brand, border-brand, etc.
+ * Cambiando un valor acá se cambia en toda la app.
+ */
+@theme {
+    --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+    --color-brand: #7c5cf0; /* violeta principal */
+    --color-brand-dark: #6444dc; /* violeta al pasar el mouse */
+    --color-brand-soft: #f1edff; /* violeta muy claro, botones secundarios */
+    --color-accent: #0ea5a4; /* verde agua, para detalles */
+    --color-ink: #1f2933; /* texto normal */
+    --color-muted: #6b7785; /* texto secundario */
+    --color-line: #e2e6ea; /* bordes */
+}
