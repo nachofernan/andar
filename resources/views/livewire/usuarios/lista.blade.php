@@ -1,9 +1,14 @@
 {{-- Vista de App\Livewire\Usuarios\Lista: tabla de disciplinas a la izquierda (angosta) y tabla de profesionales a la derecha. --}}
-{{-- Mobile (max-md:): una tarjeta debajo de la otra, con Profesionales primero (por eso Disciplinas lleva order-last). --}}
-<div class="grid grid-cols-[24rem_1fr] items-start gap-8 max-md:grid-cols-1 max-md:gap-4">
+{{--
+    Mobile (max-md:, ver docs/mobile.md): un bloque debajo del otro, de borde a borde y sin forma de tarjeta (sin esquinas
+    redondeadas ni sombra; los márgenes negativos les comen el margen que deja la página). Arriba Disciplinas, plegada:
+    solo se ve su título hasta tocar "Ver disciplinas".
+--}}
+<div class="grid grid-cols-[24rem_1fr] items-start gap-8 max-md:grid-cols-1 max-md:gap-3">
     {{-- Disciplinas: tabla angosta. Clic en una fila lleva a su pantalla, donde se ve y se edita. --}}
-    <div class="grid gap-4 max-md:order-last">
-        <div class="grid gap-2 rounded-[20px] bg-white p-2 shadow-[0_10px_40px] shadow-brand/15">
+    {{-- "abierta" (Alpine) dice si en mobile se ve la tabla; en desktop no cambia nada. --}}
+    <div class="grid gap-4" x-data="{ abierta: false }">
+        <div class="grid gap-2 rounded-[20px] bg-white p-2 shadow-[0_10px_40px] shadow-brand/15 max-md:-mx-3 max-md:-mt-3 max-md:rounded-none max-md:shadow-none">
             {{-- Cabecera de la tarjeta: título con la cantidad y, a la derecha, el link para cargar una nueva. --}}
             <div class="flex items-center justify-between gap-3 px-4 pt-4">
                 <h2 class="flex items-center gap-2 font-semibold">
@@ -13,7 +18,12 @@
                 <a href="{{ route('disciplinas.crear') }}" class="font-semibold text-brand hover:underline">+ Nueva</a>
             </div>
 
-            <table class="w-full text-left text-sm">
+            {{-- Solo mobile: el link que muestra u oculta la tabla de abajo. --}}
+            <button type="button" @click="abierta = ! abierta" class="cursor-pointer px-4 pb-2 text-left text-sm font-semibold text-brand md:hidden"
+                x-text="abierta ? 'Ocultar disciplinas ▲' : 'Ver disciplinas ▼'">Ver disciplinas ▼</button>
+
+            {{-- En mobile arranca oculta (max-md:hidden) y Alpine le saca esa clase cuando "abierta" es true. --}}
+            <table class="w-full text-left text-sm max-md:hidden" :class="{ 'max-md:hidden': ! abierta }">
                 <thead class="text-muted">
                     <tr>
                         <th class="px-4 py-3 font-medium">Disciplina</th>
@@ -47,7 +57,7 @@
 
     {{-- Profesionales --}}
     <div class="grid gap-4">
-        <div class="grid gap-2 rounded-[20px] bg-white p-2 shadow-[0_10px_40px] shadow-brand/15">
+        <div class="grid gap-2 rounded-[20px] bg-white p-2 shadow-[0_10px_40px] shadow-brand/15 max-md:-mx-3 max-md:-mb-3 max-md:rounded-none max-md:shadow-none">
             {{-- Cabecera de la tarjeta: título con la cantidad y, a la derecha, el link para cargar uno nuevo. --}}
             <div class="flex items-center justify-between gap-3 px-4 pt-4">
                 <h1 class="flex items-center gap-2 font-semibold">

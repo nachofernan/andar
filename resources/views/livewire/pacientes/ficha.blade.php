@@ -13,7 +13,9 @@
     </div>
 
     {{-- Cabecera: quién es y, a la derecha, los datos sueltos. Los opcionales vacíos se muestran con una raya. --}}
-    <div class="flex flex-wrap items-start gap-x-6 gap-y-4 rounded-[20px] bg-white p-6 shadow-[0_10px_40px] shadow-brand/15 max-md:gap-x-3 max-md:gap-y-3 max-md:p-4">
+    {{-- Mobile: con los datos abiertos pierde las esquinas redondeadas de abajo, porque la columna del costado se le pega debajo (ver <aside>). --}}
+    <div class="flex flex-wrap items-start gap-x-6 gap-y-4 rounded-[20px] bg-white p-6 shadow-[0_10px_40px] shadow-brand/15 max-md:gap-x-3 max-md:gap-y-3 max-md:p-4"
+        :class="{ 'max-md:rounded-b-none': datos }">
         {{-- Círculo con las iniciales del paciente. --}}
         <span class="grid size-14 shrink-0 place-items-center rounded-full bg-linear-to-br from-brand to-accent text-lg font-bold text-white max-md:size-11 max-md:text-base">{{ $paciente->iniciales }}</span>
 
@@ -60,10 +62,15 @@
         <livewire:pacientes.mensajes :paciente="$paciente" />
 
         {{-- Columna lateral. content-start: las tarjetas quedan arriba, sin estirarse si el historial es más alto. --}}
-        {{-- Mobile: oculta hasta que se toca el botón de la cabecera; al mostrarse va arriba del historial (order-first). --}}
-        <aside class="grid content-start gap-4 max-md:order-first max-md:hidden" :class="{ 'max-md:hidden': ! datos }">
+        {{--
+            Mobile: oculta hasta que se toca el botón de la cabecera; al mostrarse va arriba del historial (order-first).
+            Ahí no son tres tarjetas sueltas sino la continuación de la tarjeta de la cabecera: el margen negativo (-mt-4)
+            la pega a ella, lleva el fondo blanco y la sombra, y cada bloque de adentro pierde los suyos y queda
+            separado del anterior por una línea.
+        --}}
+        <aside class="grid content-start gap-4 max-md:order-first max-md:hidden max-md:-mt-4 max-md:rounded-b-[20px] max-md:bg-white max-md:px-4 max-md:pb-4 max-md:shadow-[0_10px_40px] max-md:shadow-brand/15" :class="{ 'max-md:hidden': ! datos }">
             {{-- Equipo: un renglón por profesional, con su círculo de iniciales y las etiquetas de color de sus disciplinas. --}}
-            <div class="grid gap-3 rounded-[20px] bg-white p-6 shadow-[0_10px_40px] shadow-brand/15 max-md:p-4">
+            <div class="grid gap-3 rounded-[20px] bg-white p-6 shadow-[0_10px_40px] shadow-brand/15 max-md:rounded-none max-md:border-t max-md:border-line max-md:p-0 max-md:pt-4 max-md:shadow-none">
                 <h2 class="font-semibold">Equipo</h2>
                 @forelse ($paciente->profesionales as $profesional)
                     <div wire:key="profesional-{{ $profesional->id }}" class="flex items-start gap-2.5 text-sm">
@@ -85,7 +92,7 @@
             </div>
 
             {{-- Diagnóstico. El equipo lo puede cambiar con "Editar", que abre una ventana (ver más abajo). --}}
-            <div class="grid gap-3 rounded-[20px] bg-white p-6 shadow-[0_10px_40px] shadow-brand/15 max-md:p-4">
+            <div class="grid gap-3 rounded-[20px] bg-white p-6 shadow-[0_10px_40px] shadow-brand/15 max-md:rounded-none max-md:border-t max-md:border-line max-md:p-0 max-md:pt-4 max-md:shadow-none">
                 <div class="flex items-center justify-between gap-2">
                     <h2 class="font-semibold">Diagnóstico</h2>
                     @if ($esDelEquipo)
@@ -99,7 +106,7 @@
 
             {{-- Archivos: todos los adjuntos del historial, juntos. Solo para el equipo, y solo si hay alguno. --}}
             @if ($conArchivos->isNotEmpty())
-                <div class="grid gap-3 rounded-[20px] bg-white p-6 text-sm shadow-[0_10px_40px] shadow-brand/15 max-md:p-4">
+                <div class="grid gap-3 rounded-[20px] bg-white p-6 text-sm shadow-[0_10px_40px] shadow-brand/15 max-md:rounded-none max-md:border-t max-md:border-line max-md:p-0 max-md:pt-4 max-md:shadow-none">
                     <h2 class="text-base font-semibold">Archivos</h2>
                     {{-- La lista tiene un alto máximo: pasado ese punto, scrollea por dentro en vez de estirar la tarjeta. --}}
                     <div class="-mr-3 grid max-h-72 gap-3 overflow-y-auto pr-3">

@@ -16,7 +16,11 @@
     </div>
 
     {{-- Mis pacientes --}}
-    <div class="grid gap-2 rounded-[20px] bg-white p-2 shadow-[0_10px_40px] shadow-brand/15">
+    {{--
+        Mobile: deja de ser una tarjeta y va de borde a borde: sin esquinas redondeadas ni sombra, y con márgenes
+        negativos (-mx-3 -mb-3) que le comen el margen que deja la página a los costados y abajo.
+    --}}
+    <div class="grid gap-2 rounded-[20px] bg-white p-2 shadow-[0_10px_40px] shadow-brand/15 max-md:-mx-3 max-md:-mb-3 max-md:rounded-none max-md:shadow-none">
         {{-- Cabecera de la tarjeta: título con la cantidad. --}}
         <div class="flex items-center justify-between gap-3 px-4 pt-4">
             <h2 class="flex items-center gap-2 font-semibold">
@@ -42,7 +46,8 @@
 
             <label class="flex items-center gap-2 text-sm text-muted">
                 <input type="checkbox" wire:model.live="soloSinLeer" class="size-4 rounded border-line text-brand">
-                Solo con mensajes sin leer
+                {{-- En mobile la frase va más corta, para que entre en el mismo renglón que el filtro de estado. --}}
+                Solo <span class="max-md:hidden">con mensajes</span> sin leer
             </label>
         </div>
 

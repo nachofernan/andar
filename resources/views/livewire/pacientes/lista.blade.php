@@ -1,6 +1,10 @@
 {{-- Vista de App\Livewire\Pacientes\Lista: listado administrativo, con buscador, filtros y orden. --}}
 <div class="grid gap-4">
-    <div class="grid gap-2 rounded-[20px] bg-white p-2 shadow-[0_10px_40px] shadow-brand/15">
+    {{--
+        Mobile: deja de ser una tarjeta y ocupa toda la pantalla, pegada a la barra de arriba: sin esquinas redondeadas
+        ni sombra, y con un margen negativo (-m-3) que le come el margen que deja la página.
+    --}}
+    <div class="grid gap-2 rounded-[20px] bg-white p-2 shadow-[0_10px_40px] shadow-brand/15 max-md:-m-3 max-md:rounded-none max-md:shadow-none">
         {{-- Cabecera de la tarjeta: título con la cantidad y, a la derecha, el link para cargar uno nuevo. --}}
         <div class="flex items-center justify-between gap-3 px-4 pt-4">
             <h1 class="flex items-center gap-2 font-semibold">

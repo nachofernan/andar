@@ -6,7 +6,11 @@
     Si están a la vista o no lo guarda Alpine en "filtros" (x-data, acá abajo); en desktop esa variable no cambia nada.
 --}}
 {{-- flex-col: los tres bloques van apilados y el del medio (los mensajes) se estira para ocupar el alto que sobre. --}}
-<div class="flex flex-col rounded-[20px] bg-white shadow-[0_10px_40px] shadow-brand/15" x-data="{ filtros: false }">
+{{--
+    Mobile: deja de ser una tarjeta y va de borde a borde, para aprovechar todo el ancho: sin esquinas redondeadas ni
+    sombra, y con márgenes negativos (-mx-3 -mb-3) que le comen el margen que deja la página a los costados y abajo.
+--}}
+<div class="flex flex-col rounded-[20px] bg-white shadow-[0_10px_40px] shadow-brand/15 max-md:-mx-3 max-md:-mb-3 max-md:rounded-none max-md:shadow-none" x-data="{ filtros: false }">
     @if (! $esDelEquipo)
         <div class="grid gap-2 p-6">
             <h2 class="font-semibold">Historial del equipo</h2>
@@ -123,11 +127,11 @@
                             <x-avatar :usuario="$mensaje->autor" class="max-md:size-7 max-md:text-[11px]" />
 
                             <div class="grid max-w-[75%] max-md:max-w-[85%] gap-1 {{ $esMio ? 'justify-items-end' : 'justify-items-start' }}">
-                                {{-- Quién, sus disciplinas y la hora. --}}
+                                {{-- Quién, sus disciplinas y la hora. En mobile las disciplinas no se muestran (max-md:hidden), para ganar lugar. --}}
                                 <div class="flex flex-wrap items-center gap-1.5 text-xs {{ $esMio ? 'flex-row-reverse' : '' }}">
                                     <span class="text-sm font-semibold">{{ $mensaje->autor->name }}</span>
                                     @foreach ($mensaje->autor->disciplinas as $disciplina)
-                                        <x-disciplina.etiqueta :disciplina="$disciplina" class="py-0.5" />
+                                        <x-disciplina.etiqueta :disciplina="$disciplina" class="py-0.5 max-md:hidden" />
                                     @endforeach
                                     <span class="text-muted">{{ $mensaje->created_at->format('H:i') }}</span>
                                     @if ($esNuevo)
@@ -171,9 +175,13 @@
                 class="rounded-xl border-[1.5px] border-line px-3.5 py-[11px] text-sm outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15 max-md:h-20 max-md:text-base"></textarea>
             @error('cuerpo') <span class="text-[13px] text-red-600">{{ $message }}</span> @enderror
 
-            <div class="flex flex-wrap items-center gap-2">
+            {{--
+                Mobile: los tres van siempre en un renglón (flex-nowrap). El tipo ocupa el lugar que sobre (flex-1),
+                "Adjuntar" queda solo con el clip y "Enviar" un poco más angosto.
+            --}}
+            <div class="flex flex-wrap items-center gap-2 max-md:flex-nowrap">
                 <select wire:model="tipo" aria-label="Tipo de mensaje"
-                    class="rounded-xl border-[1.5px] border-line bg-white px-3.5 py-2 text-sm outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15 max-md:px-2.5 max-md:text-base">
+                    class="rounded-xl border-[1.5px] border-line bg-white px-3.5 py-2 text-sm outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15 max-md:min-w-0 max-md:flex-1 max-md:px-2.5 max-md:text-base">
                     @foreach ($tiposParaEscribir as $clave => $nombre)
                         <option value="{{ $clave }}">{{ $nombre }}</option>
                     @endforeach
@@ -185,18 +193,18 @@
                     "accept" hace que el explorador muestre solo los tipos permitidos.
                     wire:key cambia con cada elección y cada envío, para que el selector quede vacío y se pueda volver a usar.
                 --}}
-                <label class="cursor-pointer rounded-xl bg-brand-soft px-3.5 py-2 text-sm font-semibold text-brand transition-colors hover:bg-[#e6dfff]"
+                <label class="cursor-pointer rounded-xl bg-brand-soft px-3.5 py-2 text-sm font-semibold text-brand transition-colors hover:bg-[#e6dfff] max-md:shrink-0 max-md:text-base"
                     title="PDF, Word, Excel o imágenes. Hasta {{ \App\Models\Mensaje::MAX_ADJUNTOS }} archivos de {{ \App\Models\Mensaje::MAX_KB_ADJUNTO / 1024 }} MB.">
-                    📎 Adjuntar
+                    📎 <span class="max-md:hidden">Adjuntar</span>
                     <input type="file" wire:model="nuevos" wire:key="selector-{{ $envios }}-{{ count($archivos) }}" multiple class="hidden"
                         accept="{{ collect(\App\Models\Mensaje::EXTENSIONES_ADJUNTO)->map(fn ($extension) => '.'.$extension)->join(',') }}">
                 </label>
                 {{-- Se muestra solo mientras los archivos se están subiendo. --}}
-                <span wire:loading wire:target="nuevos" class="text-[13px] text-muted">Subiendo…</span>
+                <span wire:loading wire:target="nuevos" class="text-[13px] text-muted max-md:shrink-0">Subiendo…</span>
 
                 {{-- El botón se desactiva mientras suben los archivos, para no enviar el mensaje sin ellos. --}}
                 <button type="submit" wire:loading.attr="disabled" wire:target="nuevos"
-                    class="ml-auto cursor-pointer rounded-xl bg-brand px-5 py-2 font-semibold text-white transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50">Enviar</button>
+                    class="ml-auto cursor-pointer rounded-xl bg-brand px-5 py-2 font-semibold text-white transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50 max-md:shrink-0 max-md:px-4">Enviar</button>
             </div>
             @error('tipo') <span class="text-[13px] text-red-600">{{ $message }}</span> @enderror
 

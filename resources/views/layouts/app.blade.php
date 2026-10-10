@@ -12,11 +12,12 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 {{-- Fondo con degradé violeta → verde agua. --}}
-<body class="min-h-screen bg-linear-to-br from-[#efeaff] to-[#e4f6f6] bg-fixed font-sans text-ink">
+{{-- max-md:min-h-dvh: en el celular, el alto que se ve de verdad (sin lo que tapa la barra del navegador). --}}
+<body class="min-h-screen bg-linear-to-br from-[#efeaff] to-[#e4f6f6] bg-fixed font-sans text-ink max-md:min-h-dvh">
     @auth
         {{-- Barra superior: solo con sesión iniciada. --}}
-        {{-- max-md:relative: en mobile, el panel del menú ☰ se ubica respecto de la barra (ver más abajo). --}}
-        <header class="border-b border-line bg-white max-md:relative">
+{{-- Mobile: la barra queda fija arriba al bajar con el scroll (sticky). El panel del menú ☰ se ubica respecto de ella (ver más abajo). --}}
+        <header class="border-b border-line bg-white max-md:sticky max-md:top-0 max-md:z-30">
             <div class="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
                 <a href="{{ route('inicio') }}" class="flex items-center gap-2">
                     <span class="grid size-8 place-items-center rounded-full bg-linear-to-br from-brand to-accent font-bold text-white">A</span>
