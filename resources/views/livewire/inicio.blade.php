@@ -1,26 +1,36 @@
-{{-- Vista de App\Livewire\Inicio: saludo, tarjetas de resumen y la tabla "Mis pacientes". --}}
+{{-- Vista de App\Livewire\Inicio: saludo con el aviso de mensajes sin leer y la tabla "Mis pacientes". --}}
 <div class="grid gap-4">
-    <h1 class="text-[22px] font-bold">Hola, {{ auth()->user()->name }} 👋</h1>
-
-    {{-- Tarjetas de resumen: un número grande y debajo qué cuenta (ver 'resumen' en la clase). --}}
-    <div class="grid grid-cols-3 gap-4">
-        @foreach ($resumen as $texto => $numero)
-            <div class="rounded-[20px] bg-white px-6 py-5 shadow-[0_10px_40px] shadow-brand/15">
-                <p class="text-[28px] font-bold leading-tight text-brand">{{ $numero }}</p>
-                <p class="text-sm text-muted">{{ $texto }}</p>
-            </div>
-        @endforeach
+    {{-- Saludo, dentro de un globo (como de chat: la esquina de abajo a la izquierda va menos redondeada). --}}
+    <div class="justify-self-start rounded-[20px] rounded-bl-md bg-white px-12 py-6 shadow-[0_10px_40px] shadow-brand/15">
+        <h1 class="text-[22px] font-bold">Hola, {{ auth()->user()->name }} 👋</h1>
+        {{-- Cuántos mensajes sin leer tiene y de cuántos pacientes (ver User::mensajesSinLeer). --}}
+        @if ($sinLeer->isNotEmpty())
+            <p class="text-sm">
+                Tenés
+                <span class="font-semibold text-brand">{{ $sinLeer->sum() }} {{ $sinLeer->sum() == 1 ? 'mensaje' : 'mensajes' }} sin leer</span>
+                de {{ $sinLeer->count() }} {{ $sinLeer->count() === 1 ? 'paciente' : 'pacientes' }}.
+            </p>
+        @else
+            <p class="text-sm text-muted">No tenés mensajes nuevos.</p>
+        @endif
     </div>
 
     {{-- Mis pacientes --}}
     <div class="grid gap-2 rounded-[20px] bg-white p-2 shadow-[0_10px_40px] shadow-brand/15">
-        {{-- Título, buscador y filtros. wire:model.live vuelve a armar la tabla apenas cambian. --}}
-        <div class="flex flex-wrap items-center gap-3 px-4 pt-4">
-            <h2 class="mr-auto font-semibold">Mis pacientes</h2>
+        {{-- Cabecera de la tarjeta: título con la cantidad. --}}
+        <div class="flex items-center justify-between gap-3 px-4 pt-4">
+            <h2 class="flex items-center gap-2 font-semibold">
+                Mis pacientes
+                {{-- Cuántos hay en la tabla en este momento (cambia con el buscador y los filtros). --}}
+                <span class="rounded-full bg-brand-soft px-3 py-1 text-sm font-semibold text-brand">{{ $pacientes->count() }}</span>
+            </h2>
+        </div>
 
+        {{-- Buscador y filtros, en su propio renglón. wire:model.live vuelve a armar la tabla apenas cambian. --}}
+        <div class="flex flex-wrap items-center gap-3 px-4 pt-2">
             {{-- debounce: espera a que se deje de escribir un instante, para no consultar en cada tecla. --}}
             <input type="search" wire:model.live.debounce.300ms="buscar" placeholder="Buscar paciente…"
-                class="w-56 rounded-xl border-[1.5px] border-line px-3.5 py-2 text-sm outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15">
+                class="mr-auto w-72 rounded-xl border-[1.5px] border-line px-3.5 py-2 text-sm outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15">
 
             <select wire:model.live="estado"
                 class="rounded-xl border-[1.5px] border-line bg-white px-3.5 py-2 text-sm outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15">

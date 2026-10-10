@@ -1,6 +1,6 @@
 {{--
     Vista de App\Livewire\Disciplinas\Formulario: sirve para crear y para editar (ver $disciplinaId en la clase).
-    A la izquierda el nombre y el color; a la derecha, quiénes la tienen (al editar) y los botones.
+    A la izquierda el nombre y el color; a la derecha, los profesionales que la tienen y los botones.
 --}}
 @php
     // Clases de los controles (input), para no repetirlas en cada campo.
@@ -43,18 +43,25 @@
 
         {{-- Columna derecha: queda fija al bajar con el scroll (sticky), así los botones están siempre a la vista. --}}
         <aside class="sticky top-4 grid gap-4">
-            {{-- Quiénes la tienen: solo al editar y solo para mirar. Se cambia desde el formulario de cada profesional. --}}
-            @if ($disciplinaId)
-                <x-formulario.seccion titulo="Profesionales" ayuda="Quiénes tienen esta disciplina. Se cambia desde cada profesional.">
-                    <div class="grid gap-1 text-sm">
-                        @forelse ($profesionales as $profesional)
-                            <a href="{{ route('usuarios.editar', $profesional) }}" wire:key="profesional-{{ $profesional->id }}" class="font-medium text-brand hover:text-brand-dark">{{ $profesional->name }}</a>
-                        @empty
-                            <p class="text-muted">Todavía nadie.</p>
-                        @endforelse
-                    </div>
-                </x-formulario.seccion>
-            @endif
+            {{-- Profesionales: un renglón por usuario. Los tildados quedan con esta disciplina. --}}
+            <x-formulario.seccion titulo="Profesionales" ayuda="Quiénes tienen esta disciplina.">
+                {{-- Cuántos hay tildados. Lo actualiza Alpine al instante, leyendo la propiedad "profesionales" del componente. --}}
+                <p class="-mt-2 text-xs text-muted" x-data>
+                    <span x-text="$wire.profesionales.length"></span> elegidos
+                </p>
+
+                <div class="-mx-2 grid max-h-[26rem] gap-1 overflow-y-auto">
+                    @foreach ($usuarios as $usuario)
+                        {{-- Todo el renglón es clickeable. has-[:checked] lo resalta cuando su casilla está tildada. --}}
+                        <label wire:key="usuario-{{ $usuario->id }}"
+                            class="flex cursor-pointer items-center gap-2.5 rounded-xl px-2 py-2 text-sm transition-colors hover:bg-brand-soft/50 has-[:checked]:bg-brand-soft">
+                            <input type="checkbox" wire:model="profesionales" value="{{ $usuario->id }}" class="size-4">
+                            <span class="font-medium">{{ $usuario->name }}</span>
+                        </label>
+                    @endforeach
+                </div>
+                @error('profesionales.*') <span class="text-[13px] text-red-600">{{ $message }}</span> @enderror
+            </x-formulario.seccion>
 
             <div class="grid gap-2">
                 <button type="submit" class="cursor-pointer rounded-xl bg-brand px-4 py-2.5 font-semibold text-white transition-colors hover:bg-brand-dark">Guardar</button>

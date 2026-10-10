@@ -30,9 +30,9 @@
                     $enAdministracion = request()->is('administracion*');
                 @endphp
                 <nav class="flex items-center gap-8 text-sm font-medium">
-                    {{-- "Inicio" también queda marcado en la ficha de un paciente, porque se llega desde ahí. --}}
+                    {{-- "Mis pacientes" es el Inicio. También queda marcado en la ficha de un paciente, porque se llega desde ahí. --}}
                     <a href="{{ route('inicio') }}" class="relative {{ request()->routeIs('inicio', 'pacientes.ver') ? 'text-brand' : 'text-muted hover:text-brand' }}">
-                        Inicio
+                        Mis pacientes
                         {{-- Puntito rojo arriba a la derecha si hay mensajes sin leer. No dice cuántos: el detalle está en el Inicio. --}}
                         @if ($sinLeer > 0)
                             <span class="absolute -right-2 -top-0.5 size-2 rounded-full bg-red-500" title="Tenés mensajes sin leer"></span>

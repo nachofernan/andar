@@ -19,7 +19,7 @@ class Formulario extends Component
 {
     use SoloDireccion; // Solo Dirección puede usar esta pantalla (ver docs/roles.md).
 
-    /** Contraseña con la que nace todo usuario nuevo. Provisorio: después cada uno la cambia en Mi perfil. */
+    /** Contraseña que viene precargada al crear un usuario. Se puede cambiar ahí mismo; después cada uno la cambia en Mi perfil. */
     public const CONTRASENA_INICIAL = 'password';
 
     // Id del usuario que se está editando. null = se está creando uno nuevo.
@@ -30,8 +30,17 @@ class Formulario extends Component
 
     public string $email = '';
 
-    // Uno de User::ROLES. Un usuario nuevo arranca como profesional.
-    public string $rol = 'profesional';
+    /** Teléfono o WhatsApp de contacto. Opcional y sin cifrar (es contacto laboral; ver docs/cifrado.md). */
+    public string $telefono = '';
+
+    /**
+     * Contraseña. Al crear viene precargada con CONTRASENA_INICIAL y es obligatoria.
+     * Al editar arranca vacía: si se deja así, no se toca; si se escribe algo, pasa a ser la nueva.
+     */
+    public string $password = '';
+
+    /** ¿Es administrador? Tildado = rol Dirección; sin tildar = rol Profesional (ver docs/roles.md). */
+    public bool $admin = false;
 
     /** @var array<int, string> Ids de las disciplinas tildadas. Vacío = sin disciplina. */
     public array $disciplinas = [];
@@ -40,13 +49,16 @@ class Formulario extends Component
     public function mount(?User $usuario = null): void
     {
         if (! $usuario?->exists) {
-            return; // Se está creando: el formulario queda vacío.
+            $this->password = self::CONTRASENA_INICIAL; // Se está creando: solo viene precargada la contraseña.
+
+            return;
         }
 
         $this->usuarioId = $usuario->id;
         $this->name = $usuario->name;
         $this->email = $usuario->email;
-        $this->rol = $usuario->rol ?? 'profesional';
+        $this->telefono = $usuario->telefono ?? '';
+        $this->admin = $usuario->esDireccion();
         // Como texto, porque así los manda el navegador y así se comparan con las casillas.
         $this->disciplinas = $usuario->disciplinas->pluck('id')->map(fn ($id) => (string) $id)->all();
     }
@@ -56,16 +68,20 @@ class Formulario extends Component
     {
         $this->name = trim($this->name);
         $this->email = trim($this->email);
+        $this->telefono = trim($this->telefono);
 
         $datos = $this->validate(
             [
                 'name' => ['required', 'max:255'],
                 // Único en la tabla, sin contar al usuario que se está editando.
                 'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($this->usuarioId)],
-                'rol' => ['required', Rule::in(array_keys(User::ROLES)), function (string $campo, mixed $valor, \Closure $fallar) {
-                    // El centro no puede quedar sin nadie de Dirección: nadie podría cargar usuarios ni pacientes.
-                    if ($valor !== 'direccion' && $this->esLaUnicaDireccion()) {
-                        $fallar('Es la única persona de Dirección: antes hay que darle ese rol a otra.');
+                'telefono' => ['nullable', 'max:50'],
+                // Obligatoria al crear; al editar se puede dejar vacía para no cambiarla.
+                'password' => [$this->usuarioId ? 'nullable' : 'required', 'min:8', 'max:255'],
+                'admin' => ['boolean', function (string $campo, mixed $valor, \Closure $fallar) {
+                    // El centro no puede quedar sin ningún administrador: nadie podría cargar usuarios ni pacientes.
+                    if (! $valor && $this->esLaUnicaDireccion()) {
+                        $fallar('Es la única persona administradora: antes hay que hacer administradora a otra.');
                     }
                 }],
                 'disciplinas' => ['array'],
@@ -76,21 +92,30 @@ class Formulario extends Component
                 'max' => 'El texto es demasiado largo.',
                 'email' => 'Ingresá un email válido.',
                 'unique' => 'Ya existe un usuario con ese email.',
-                'rol.in' => 'Elegí un rol de la lista.',
+                'password.min' => 'La contraseña tiene que tener al menos 8 caracteres.',
                 'disciplinas.*.exists' => 'Una de las disciplinas elegidas no existe.',
             ],
         );
 
         // El rol y las disciplinas no son columnas del usuario: se guardan aparte.
-        $rol = $datos['rol'];
+        $rol = $datos['admin'] ? 'direccion' : 'profesional';
         $disciplinas = $datos['disciplinas'];
-        unset($datos['rol'], $datos['disciplinas']);
+        unset($datos['admin'], $datos['disciplinas']);
 
+        // El teléfono vacío se guarda como null.
+        $datos['telefono'] = $datos['telefono'] !== '' ? $datos['telefono'] : null;
+
+        // Editando con la contraseña en blanco: se saca de los datos para no pisar la que tiene.
+        if ($datos['password'] === '') {
+            unset($datos['password']);
+        }
+
+        // La contraseña se encripta sola al guardarse (ver User::casts).
         if ($this->usuarioId) {
             $usuario = User::findOrFail($this->usuarioId);
-            $usuario->update($datos); // Al editar no se toca la contraseña.
+            $usuario->update($datos);
         } else {
-            $usuario = User::create($datos + ['password' => self::CONTRASENA_INICIAL]); // Se encripta sola (ver User::casts).
+            $usuario = User::create($datos);
         }
 
         // syncRoles deja al usuario con ese único rol.
@@ -114,7 +139,6 @@ class Formulario extends Component
         return view('livewire.usuarios.formulario', [
             // Para las casillas. No se llama "disciplinas" porque ese nombre ya lo usa la propiedad de arriba.
             'todasLasDisciplinas' => Disciplina::orderBy('nombre')->get(),
-            'roles' => User::ROLES, // Para las opciones de rol.
         ]);
     }
 }

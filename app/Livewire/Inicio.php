@@ -10,8 +10,8 @@ use Livewire\Component;
 
 /**
  * Página de inicio (la primera después de iniciar sesión).
- * Muestra un resumen en tarjetas y la tabla "Mis pacientes": los que atiende el usuario logueado,
- * con el aviso de mensajes sin leer y la última actividad de cada uno.
+ * Saluda, avisa cuántos mensajes sin leer hay y muestra la tabla "Mis pacientes": los que atiende
+ * el usuario logueado, con el aviso de mensajes sin leer y la última actividad de cada uno.
  *
  * La tabla se puede buscar, filtrar y ordenar (trait ConTabla; ver docs/tablas.md).
  * Los pacientes con mensajes sin leer van siempre arriba, se ordene por lo que se ordene.
@@ -49,7 +49,7 @@ class Inicio extends Component
         // "id del paciente => cantidad de mensajes sin leer" (ver User::mensajesSinLeer).
         $sinLeer = $usuario->mensajesSinLeer();
 
-        // Todos mis pacientes, sin filtrar: de acá salen las tarjetas y, filtrando, la tabla.
+        // Todos mis pacientes, sin filtrar. La tabla sale de filtrar esta lista.
         $misPacientes = $usuario->pacientes()->get();
 
         // El último mensaje de cada uno de mis pacientes (con quién lo escribió), en una sola consulta.
@@ -83,12 +83,6 @@ class Inicio extends Component
             'pacientes' => $conSinLeer->concat($alDia),
             // Para distinguir "no tenés pacientes" de "ninguno coincide con los filtros".
             'tienePacientes' => $misPacientes->isNotEmpty(),
-            // Tarjetas de arriba: texto => número. No cambian con los filtros de la tabla.
-            'resumen' => [
-                'Pacientes activos' => $misPacientes->where('activo', true)->count(),
-                'Pacientes con mensajes sin leer' => $sinLeer->count(),
-                'Mensajes sin leer' => $sinLeer->sum(),
-            ],
         ]);
     }
 }

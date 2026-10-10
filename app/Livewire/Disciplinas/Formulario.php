@@ -4,6 +4,7 @@ namespace App\Livewire\Disciplinas;
 
 use App\Livewire\Concerns\SoloDireccion;
 use App\Models\Disciplina;
+use App\Models\User;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 
@@ -27,6 +28,9 @@ class Formulario extends Component
     /** Color de la disciplina en hexa (ej. #7c5cf0). Una nueva arranca con el violeta de la app. */
     public string $color = Disciplina::COLOR_INICIAL;
 
+    /** @var array<int, string> Ids de los profesionales tildados: los que tienen esta disciplina. */
+    public array $profesionales = [];
+
     /** Al abrir la pantalla: si la URL trae una disciplina, carga sus datos en el formulario. */
     public function mount(?Disciplina $disciplina = null): void
     {
@@ -37,9 +41,11 @@ class Formulario extends Component
         $this->disciplinaId = $disciplina->id;
         $this->nombre = $disciplina->nombre;
         $this->color = $disciplina->color;
+        // Como texto, porque así los manda el navegador y así se comparan con las casillas.
+        $this->profesionales = $disciplina->profesionales->pluck('id')->map(fn ($id) => (string) $id)->all();
     }
 
-    /** Se ejecuta al enviar el formulario: valida, crea o actualiza la disciplina y vuelve al listado. */
+    /** Se ejecuta al enviar el formulario: valida, guarda la disciplina y quiénes la tienen, y vuelve al listado. */
     public function guardar()
     {
         $this->nombre = trim($this->nombre); // Sin espacios de más, para que "Psicología " no cuente como otra.
@@ -51,20 +57,27 @@ class Formulario extends Component
                 'nombre' => ['required', 'max:255', Rule::unique('disciplinas', 'nombre')->ignore($this->disciplinaId)],
                 // Hexa completo: numeral y seis caracteres entre 0-9 y a-f.
                 'color' => ['required', 'regex:/^#[0-9a-f]{6}$/'],
+                'profesionales' => ['array'],
+                'profesionales.*' => ['exists:users,id'],
             ],
             [
                 'required' => 'Este campo es obligatorio.',
                 'max' => 'El nombre es demasiado largo.',
                 'unique' => 'Ya existe una disciplina con ese nombre.',
                 'color.regex' => 'Escribí el color en hexa, por ejemplo #7c5cf0.',
+                'profesionales.*.exists' => 'Uno de los profesionales elegidos no existe.',
             ],
         );
 
-        if ($this->disciplinaId) {
-            Disciplina::findOrFail($this->disciplinaId)->update($datos);
-        } else {
-            Disciplina::create($datos);
-        }
+        // Los profesionales no son una columna de la disciplina: se guardan aparte, en la tabla disciplina_user.
+        $profesionales = $datos['profesionales'];
+        unset($datos['profesionales']);
+
+        $disciplina = $this->disciplinaId ? Disciplina::findOrFail($this->disciplinaId) : new Disciplina;
+        $disciplina->fill($datos)->save();
+
+        // sync deja exactamente a los tildados: agrega los nuevos y saca los destildados.
+        $disciplina->profesionales()->sync($profesionales);
 
         return $this->redirectRoute('usuarios');
     }
@@ -72,10 +85,8 @@ class Formulario extends Component
     public function render()
     {
         return view('livewire.disciplinas.formulario', [
-            // Quiénes tienen esta disciplina, para mostrarlos al editar. Creando una nueva, nadie todavía.
-            'profesionales' => $this->disciplinaId
-                ? Disciplina::findOrFail($this->disciplinaId)->profesionales()->orderBy('name')->get()
-                : collect(),
+            // Todos los usuarios, para las casillas. No se llama "profesionales" porque ese nombre ya lo usa la propiedad de arriba.
+            'usuarios' => User::orderBy('name')->get(),
         ]);
     }
 }

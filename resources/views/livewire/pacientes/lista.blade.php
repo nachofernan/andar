@@ -1,17 +1,19 @@
 {{-- Vista de App\Livewire\Pacientes\Lista: listado administrativo, con buscador, filtros y orden. --}}
 <div class="grid gap-4">
-    <div class="flex items-center justify-between gap-4">
-        <h1 class="flex items-center gap-2 text-[22px] font-bold">
-            Pacientes
-            {{-- Cuántos hay en la tabla en este momento (cambia con el buscador y los filtros). --}}
-            <span class="rounded-full bg-brand-soft px-3 py-1 text-sm font-semibold text-brand">{{ $pacientes->count() }} {{ $pacientes->count() === 1 ? 'paciente' : 'pacientes' }}</span>
-        </h1>
-        <a href="{{ route('pacientes.crear') }}" class="rounded-xl bg-brand px-4 py-2.5 font-semibold text-white transition-colors hover:bg-brand-dark">Nuevo paciente</a>
-    </div>
-
     <div class="grid gap-2 rounded-[20px] bg-white p-2 shadow-[0_10px_40px] shadow-brand/15">
+        {{-- Cabecera de la tarjeta: título con la cantidad y, a la derecha, el link para cargar uno nuevo. --}}
+        <div class="flex items-center justify-between gap-3 px-4 pt-4">
+            <h1 class="flex items-center gap-2 font-semibold">
+                Pacientes
+                {{-- Cuántos hay en la tabla en este momento (cambia con el buscador y los filtros). --}}
+                <span class="rounded-full bg-brand-soft px-3 py-1 text-sm font-semibold text-brand">{{ $pacientes->count() }}</span>
+            </h1>
+            {{-- Link simple (sin fondo), subrayado al pasar el mouse. --}}
+            <a href="{{ route('pacientes.crear') }}" class="font-semibold text-brand hover:underline">+ Nuevo</a>
+        </div>
+
         {{-- Buscador y filtros. wire:model.live vuelve a armar la tabla apenas cambian. --}}
-        <div class="flex flex-wrap items-center gap-3 px-4 pt-4">
+        <div class="flex flex-wrap items-center gap-3 px-4 pt-2">
             {{-- debounce: espera a que se deje de escribir un instante, para no consultar en cada tecla. --}}
             <input type="search" wire:model.live.debounce.300ms="buscar" placeholder="Buscar por nombre o DNI…"
                 class="mr-auto w-72 rounded-xl border-[1.5px] border-line px-3.5 py-2 text-sm outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15">
