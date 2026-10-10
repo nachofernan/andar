@@ -45,9 +45,8 @@ La app avisa cuando hay mensajes que todavía no viste. No manda mails ni notifi
 
 | Lugar | Qué muestra |
 |---|---|
-| Menú de arriba | Un globito violeta al lado de **Inicio** con el total de mensajes sin leer. Si no hay, no aparece. |
-| Inicio | El bloque **Mis pacientes**: un renglón por cada paciente que atendés, con un globito al lado del nombre si tiene mensajes sin leer, y link a su ficha. |
-| Listado administrativo de pacientes (`/pacientes`, solo Dirección) | Un globito al lado del nombre de cada paciente que tiene mensajes sin leer, con la cantidad. |
+| Menú de arriba | Un puntito rojo sobre **Inicio** si hay algún mensaje sin leer. No dice cuántos: el detalle está en el Inicio. |
+| Inicio | Las tarjetas de resumen (pacientes con mensajes sin leer y total de mensajes sin leer) y la tabla **Mis pacientes**: al lado del nombre de cada paciente que tiene mensajes sin leer, una etiqueta violeta clarita con la cantidad ("3 mensajes sin leer"). Esos pacientes aparecen siempre arriba de la tabla. |
 | Historial | Los mensajes que no habías visto aparecen resaltados y con la etiqueta **Nuevo**, durante esa visita. |
 
 A tener en cuenta:
@@ -56,7 +55,7 @@ A tener en cuenta:
 - Quien se suma al equipo de un paciente ve todo su historial como sin leer hasta que abre la ficha.
 - Si te sacan del equipo de un paciente, sus mensajes dejan de contarte.
 
-Por dentro: en la tabla `paciente_user` (la que une a cada profesional con cada paciente) se guarda `mensajes_vistos_at`, la fecha y hora de la última vez que ese profesional abrió ese historial. La cuenta la hace `User::mensajesSinLeer()`, y es la única fuente de los tres avisos.
+Por dentro: en la tabla `paciente_user` (la que une a cada profesional con cada paciente) se guarda `mensajes_vistos_at`, la fecha y hora de la última vez que ese profesional abrió ese historial. La cuenta la hace `User::mensajesSinLeer()`, y es la única fuente de todos los avisos.
 
 ## Reglas
 
@@ -82,7 +81,7 @@ Están en un solo lugar: la lista `TIPOS` de `app/Models/Mensaje.php`. A la izqu
 | `resources/views/livewire/pacientes/mensajes.blade.php` | La vista del bloque |
 | `app/Http/Controllers/AdjuntoController.php` | Descarga de un adjunto (`/adjuntos/{id}`) |
 | `app/Livewire/Inicio.php` y `resources/views/livewire/inicio.blade.php` | Página de inicio: "Mis pacientes" y sus mensajes sin leer |
-| `app/Livewire/Pacientes/Lista.php` y `resources/views/layouts/app.blade.php` | Globito del listado administrativo y del menú |
+| `resources/views/layouts/app.blade.php` | El puntito rojo del menú |
 | `database/seeders/MensajeSeeder.php` | Mensajes de ejemplo (sin adjuntos) |
 | `tests/Feature/MensajesTest.php`, `AdjuntosTest.php`, `MensajesSinLeerTest.php` | Pruebas |
 

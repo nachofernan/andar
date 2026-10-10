@@ -1,6 +1,6 @@
 # Mi perfil
 
-Pantalla donde cada usuario cambia sus propios datos. Se llega desde **Mi perfil** en el menú de arriba (`/mi-perfil`); la puede abrir cualquiera con sesión iniciada, sea Dirección o profesional.
+Pantalla donde cada usuario cambia sus propios datos. Se llega haciendo clic en **el nombre del usuario**, arriba a la derecha: se abre un menú chico con **Mi perfil** (`/mi-perfil`) y **Salir**; la puede abrir cualquiera con sesión iniciada, sea Dirección o profesional.
 
 ## Qué se puede cambiar
 
@@ -12,7 +12,7 @@ El guardado es **todo o nada**: si se pidió cambiar la contraseña y la actual 
 
 ## Quién puede entrar
 
-Cualquier usuario con sesión iniciada, de cualquier rol. A diferencia de las pantallas de gestión (Disciplinas, Usuarios, Pacientes), esta no lleva `use SoloDireccion;`: cada uno edita solo su propio usuario (`auth()->user()`), nunca el de otra persona.
+Cualquier usuario con sesión iniciada, de cualquier rol. A diferencia de las pantallas de administración, esta no lleva `use SoloDireccion;`: cada uno edita solo su propio usuario (`auth()->user()`), nunca el de otra persona.
 
 ## Archivos
 
@@ -20,6 +20,7 @@ Cualquier usuario con sesión iniciada, de cualquier rol. A diferencia de las pa
 |---|---|
 | `routes/web.php` | La URL `/mi-perfil` (exige sesión) |
 | `app/Livewire/Perfil.php` | Lógica: carga los datos actuales, valida y guarda |
+| `resources/views/layouts/app.blade.php` | El desplegable del nombre del usuario, con el link a esta pantalla |
 | `resources/views/livewire/perfil.blade.php` | El formulario |
 | `database/migrations/2026_10_09_203516_add_telefono_a_users_table.php` | Agrega la columna `telefono` a `users` |
 | `app/Models/User.php` | `telefono` sumado a los campos que se pueden asignar |

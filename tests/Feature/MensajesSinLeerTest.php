@@ -21,8 +21,8 @@ class MensajesSinLeerTest extends TestCase
 {
     use RefreshDatabase; // Cada test arranca con la base vacía.
 
-    // Así sale en el HTML el globito con la cantidad (en el menú y en la lista de pacientes).
-    private const GLOBITO = 'title="Mensajes sin leer">';
+    // Así sale en el HTML el puntito rojo del menú, al lado de "Inicio". No lleva número: solo avisa que hay algo.
+    private const PUNTITO = 'title="Tenés mensajes sin leer"';
 
     /** Crea un paciente directo en la base (no hay factory de pacientes). Cada uno necesita un DNI distinto. */
     private function crearPaciente(string $nombre = 'Ana', string $apellido = 'Zapata', string $dni = '52118304'): Paciente
@@ -238,13 +238,23 @@ class MensajesSinLeerTest extends TestCase
         $this->crearMensaje($ana, $marta);
         $this->crearMensaje($bruno, $marta);
 
-        $this->actingAs($lucia)
+        $respuesta = $this->actingAs($lucia)
             ->get('/')
             ->assertOk()
             ->assertSeeLivewire(Inicio::class)
-            // Un renglón por cada paciente de su equipo, ordenados por apellido, con su cantidad al lado si tiene.
-            ->assertSeeInOrder(['Mis pacientes', 'Arnal, Bruno', '>1</span>', 'Molina, Carla', 'Zapata, Ana', '>2</span>'], false)
+            // Un renglón por cada paciente de su equipo, con su cantidad escrita al lado si tiene
+            // ("mensaje" en singular cuando es uno solo).
+            // Arriba van los que tienen mensajes sin leer (por apellido) y después el resto: por eso Carla queda última.
+            ->assertSeeInOrder([
+                'Mis pacientes',
+                'Arnal, Bruno', '>1 mensaje sin leer</span>',
+                'Zapata, Ana', '>2 mensajes sin leer</span>',
+                'Molina, Carla',
+            ], false)
             ->assertDontSee('Todavía no tenés pacientes asignados.');
+
+        // Solo dos avisos: Carla, que no tiene mensajes, no lleva ninguno (ni un "0 mensajes sin leer").
+        $this->assertSame(2, substr_count($respuesta->getContent(), ' sin leer</span>'));
     }
 
     public function test_el_inicio_avisa_cuando_no_tengo_pacientes_asignados(): void
@@ -256,28 +266,26 @@ class MensajesSinLeerTest extends TestCase
 
     // ---------------------------------------------------------------- Lista administrativa de pacientes
 
-    public function test_la_lista_administrativa_muestra_el_globito_solo_en_los_que_tienen_mensajes_sin_leer(): void
+    public function test_la_lista_administrativa_no_avisa_los_mensajes_sin_leer(): void
     {
         $ana = $this->crearPaciente('Ana', 'Zapata', '52118304');
-        $bruno = $this->crearPaciente('Bruno', 'Arnal', '40111222');
         $direccion = $this->entrarComoDireccion();
         $marta = $this->crearProfesionalDelEquipo($ana, 'Marta Díaz');
         $ana->profesionales()->attach($direccion->id); // Dirección también la atiende: le llegan mensajes.
         $this->crearMensaje($ana, $marta);
         $this->crearMensaje($ana, $marta);
 
-        $html = Livewire::test(Lista::class)
-            // El globito va al lado del nombre de Ana, con su cantidad.
-            ->assertSeeInOrder(['Arnal, Bruno', 'Zapata, Ana', self::GLOBITO.'2</span>'], false)
-            ->html();
+        // Tiene dos mensajes sin leer de Ana, pero esta pantalla es de gestión: los avisos son cosa del Inicio.
+        $this->assertSame([$ana->id => 2], $direccion->mensajesSinLeer()->all());
 
-        // Bruno no tiene mensajes: hay un solo globito en toda la lista.
-        $this->assertSame(1, substr_count($html, self::GLOBITO));
+        Livewire::test(Lista::class)
+            ->assertSee('Zapata, Ana')
+            ->assertDontSee('sin leer');
     }
 
     // ---------------------------------------------------------------- Menú
 
-    public function test_el_menu_muestra_el_total_de_mensajes_sin_leer_de_todos_mis_pacientes(): void
+    public function test_el_menu_muestra_un_puntito_sin_numero_cuando_hay_mensajes_sin_leer(): void
     {
         $ana = $this->crearPaciente('Ana', 'Zapata', '52118304');
         $bruno = $this->crearPaciente('Bruno', 'Arnal', '40111222');
@@ -288,23 +296,55 @@ class MensajesSinLeerTest extends TestCase
         $this->crearMensaje($ana, $marta);
         $this->crearMensaje($bruno, $marta);
 
-        // Se pide el inicio: el menú suma los 3 sin leer de todos los pacientes, un número que no coincide
-        // con ninguno de los globitos por paciente del bloque "Mis pacientes" (1 y 2).
-        $this->actingAs($lucia)
-            ->get('/')
+        // Se pide el perfil, que no tiene ningún otro aviso: lo que aparezca solo puede venir del menú.
+        $html = $this->actingAs($lucia)
+            ->get('/mi-perfil')
             ->assertOk()
-            ->assertSee(self::GLOBITO.'3</span>', false);
+            // El puntito va dentro del link "Inicio" y está vacío: no dice cuántos son (acá serían 3).
+            ->assertSeeInOrder(['Inicio', self::PUNTITO.'></span>'], false)
+            ->getContent();
+
+        // Uno solo, aunque los mensajes sean de dos pacientes.
+        $this->assertSame(1, substr_count($html, self::PUNTITO));
     }
 
-    public function test_el_menu_no_muestra_el_globito_cuando_no_hay_mensajes_sin_leer(): void
+    public function test_el_menu_no_muestra_el_puntito_cuando_no_hay_mensajes_sin_leer(): void
     {
         $this->actingAs(User::factory()->create())
             ->get('/')
             ->assertOk()
-            ->assertDontSee(self::GLOBITO, false);
+            ->assertDontSee(self::PUNTITO, false);
     }
 
-    public function test_al_abrir_la_ficha_el_menu_de_esa_misma_pagina_ya_no_cuenta_los_mensajes_de_ese_paciente(): void
+    public function test_los_mensajes_propios_no_prenden_el_puntito_del_menu(): void
+    {
+        $ana = $this->crearPaciente();
+        $lucia = $this->crearProfesionalDelEquipo($ana, 'Lucía Pérez');
+        $this->crearMensaje($ana, $lucia);
+
+        $this->actingAs($lucia)->get('/')->assertOk()->assertDontSee(self::PUNTITO, false);
+    }
+
+    public function test_al_abrir_la_ficha_el_menu_de_esa_misma_pagina_ya_no_avisa_los_mensajes_de_ese_paciente(): void
+    {
+        $ana = $this->crearPaciente('Ana', 'Zapata', '52118304');
+        $lucia = $this->crearProfesionalDelEquipo($ana, 'Lucía Pérez');
+        $marta = $this->crearProfesionalDelEquipo($ana, 'Marta Díaz');
+        $this->crearMensaje($ana, $marta);
+        $this->crearMensaje($ana, $marta);
+
+        // Antes de entrar, el menú avisa.
+        $this->actingAs($lucia)->get('/mi-perfil')->assertSee(self::PUNTITO, false);
+
+        // Lo único sin leer era de Ana. Al abrir su ficha pasan a leídos, y el menú de esa misma respuesta
+        // ya no tiene que mostrar el puntito: si lo mostrara, el aviso quedaría viejo hasta cambiar
+        // de pantalla (el menú se habría armado antes de marcar como leído).
+        $this->get("/pacientes/{$ana->id}")
+            ->assertOk()
+            ->assertDontSee(self::PUNTITO, false);
+    }
+
+    public function test_al_abrir_una_ficha_el_puntito_sigue_si_quedan_mensajes_de_otro_paciente(): void
     {
         $ana = $this->crearPaciente('Ana', 'Zapata', '52118304');
         $bruno = $this->crearPaciente('Bruno', 'Arnal', '40111222');
@@ -312,16 +352,12 @@ class MensajesSinLeerTest extends TestCase
         $marta = $this->crearProfesionalDelEquipo($ana, 'Marta Díaz');
         $bruno->profesionales()->attach([$lucia->id, $marta->id]);
         $this->crearMensaje($ana, $marta);
-        $this->crearMensaje($ana, $marta);
         $this->crearMensaje($bruno, $marta);
 
-        // Antes de entrar tenía 3 (2 de Ana y 1 de Bruno). Al abrir la ficha de Ana, sus 2 pasan a leídos.
-        // El menú de esa misma respuesta ya tiene que decir 1: si dijera 3, el número quedaría viejo
-        // hasta cambiar de pantalla (el menú se habría armado antes de marcar como leído).
+        // Abrir la ficha de Ana marca leídos solo los de Ana: el de Bruno sigue pendiente.
         $this->actingAs($lucia)
             ->get("/pacientes/{$ana->id}")
             ->assertOk()
-            ->assertSee(self::GLOBITO.'1</span>', false)
-            ->assertDontSee(self::GLOBITO.'3</span>', false);
+            ->assertSee(self::PUNTITO, false);
     }
 }

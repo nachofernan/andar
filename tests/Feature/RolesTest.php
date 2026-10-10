@@ -2,12 +2,14 @@
 
 namespace Tests\Feature;
 
-use App\Livewire\Disciplinas;
+use App\Livewire\Disciplinas\Formulario as FormularioDisciplina;
 use App\Livewire\Pacientes\Ficha;
 use App\Livewire\Pacientes\Formulario;
 use App\Livewire\Pacientes\Lista;
 use App\Livewire\Pacientes\Mensajes;
-use App\Livewire\Usuarios;
+use App\Livewire\Usuarios\Formulario as FormularioUsuario;
+use App\Livewire\Usuarios\Lista as ListaUsuarios;
+use App\Models\Disciplina;
 use App\Models\Mensaje;
 use App\Models\Paciente;
 use App\Models\User;
@@ -19,7 +21,8 @@ use Tests\TestCase;
 
 /**
  * Pruebas de los permisos según el rol (ver docs/roles.md).
- * Dirección carga y edita pacientes, usuarios y disciplinas, y ve la ficha de todos los pacientes.
+ * Dirección carga y edita pacientes, usuarios y disciplinas (todo lo que cuelga de /administracion),
+ * y ve la ficha de todos los pacientes.
  * Un profesional solo ve los pacientes de su equipo. El historial de mensajes es siempre solo del equipo.
  *
  * Los roles los crea una migración, así que ya existen en cada test.
@@ -81,36 +84,83 @@ class RolesTest extends TestCase
 
     // ---------------------------------------------------------------- Pantallas solo de Dirección
 
-    public function test_un_profesional_recibe_403_en_las_pantallas_de_gestion(): void
+    /**
+     * Todas las direcciones de administración (listados y formularios). Todas son solo de Dirección.
+     *
+     * @return array<int, string>
+     */
+    private function urlsDeAdministracion(Paciente $paciente, User $usuario, Disciplina $disciplina): array
+    {
+        return [
+            '/administracion/pacientes',
+            '/administracion/pacientes/crear',
+            "/administracion/pacientes/{$paciente->id}/editar",
+            '/administracion/profesionales',
+            '/administracion/profesionales/crear',
+            "/administracion/profesionales/{$usuario->id}/editar",
+            '/administracion/disciplinas/crear',
+            "/administracion/disciplinas/{$disciplina->id}/editar",
+        ];
+    }
+
+    public function test_un_profesional_recibe_403_en_todas_las_pantallas_de_administracion(): void
     {
         $paciente = $this->crearPaciente();
         // Es del equipo de ese paciente: igual no puede editarlo.
         $lucia = $this->crearProfesionalDelEquipo($paciente);
+        $disciplina = Disciplina::create(['nombre' => 'Psicología']);
 
         $this->actingAs($lucia);
 
-        $this->get('/disciplinas')->assertForbidden();
-        $this->get('/usuarios')->assertForbidden();
-        $this->get('/pacientes')->assertForbidden(); // El listado administrativo es solo de Dirección.
-        $this->get('/pacientes/crear')->assertForbidden();
-        $this->get("/pacientes/{$paciente->id}/editar")->assertForbidden();
+        // Ni siquiera puede abrir el formulario para editarse a sí misma.
+        foreach ($this->urlsDeAdministracion($paciente, $lucia, $disciplina) as $url) {
+            $this->get($url)->assertForbidden();
+        }
     }
 
-    public function test_direccion_entra_a_las_pantallas_de_gestion(): void
+    public function test_un_profesional_que_entra_a_administracion_a_secas_termina_en_un_403(): void
+    {
+        // /administracion solo redirige al listado de pacientes, y ahí lo frena el permiso.
+        $this->actingAs(User::factory()->create())
+            ->followingRedirects()
+            ->get('/administracion')
+            ->assertForbidden();
+    }
+
+    public function test_direccion_entra_a_todas_las_pantallas_de_administracion(): void
     {
         $paciente = $this->crearPaciente();
+        $disciplina = Disciplina::create(['nombre' => 'Psicología']);
 
+        $direccion = $this->entrarComoDireccion();
+
+        foreach ($this->urlsDeAdministracion($paciente, $direccion, $disciplina) as $url) {
+            $this->get($url)->assertOk();
+        }
+    }
+
+    public function test_sin_sesion_todas_las_pantallas_de_administracion_redirigen_al_login(): void
+    {
+        $paciente = $this->crearPaciente();
+        $usuario = User::factory()->direccion()->create(); // Existe, pero nadie inició sesión.
+        $disciplina = Disciplina::create(['nombre' => 'Psicología']);
+
+        $this->get('/administracion')->assertRedirect('/login');
+
+        foreach ($this->urlsDeAdministracion($paciente, $usuario, $disciplina) as $url) {
+            $this->get($url)->assertRedirect('/login');
+        }
+    }
+
+    public function test_administracion_a_secas_redirige_al_listado_de_pacientes(): void
+    {
         $this->entrarComoDireccion();
 
-        $this->get('/disciplinas')->assertOk();
-        $this->get('/usuarios')->assertOk();
-        $this->get('/pacientes')->assertOk();
-        $this->get('/pacientes/crear')->assertOk();
-        $this->get("/pacientes/{$paciente->id}/editar")->assertOk();
+        $this->get('/administracion')->assertRedirect('/administracion/pacientes');
     }
 
     /*
-     * Los tres tests que siguen prueban las ACCIONES, no la pantalla: quien ya la tenía abierta
+     * Los tests que siguen prueban las ACCIONES, no la pantalla: quien ya la tenía abierta
      * (o arma el pedido a mano) no tiene que poder guardar sin ser de Dirección.
      * Por eso la pantalla se abre como Dirección y recién después se cambia la sesión a un profesional.
      */
@@ -118,7 +168,7 @@ class RolesTest extends TestCase
     public function test_un_profesional_no_puede_guardar_un_usuario(): void
     {
         $pantalla = Livewire::actingAs(User::factory()->direccion()->create())
-            ->test(Usuarios::class)
+            ->test(FormularioUsuario::class)
             ->set('name', 'Ana Gómez')
             ->set('email', 'ana@andar.test')
             ->set('rol', 'direccion'); // El caso más grave: fabricarse un usuario de Dirección.
@@ -135,8 +185,7 @@ class RolesTest extends TestCase
         $lucia = User::factory()->create();
 
         $pantalla = Livewire::actingAs(User::factory()->direccion()->create())
-            ->test(Usuarios::class)
-            ->call('editar', $lucia->id)
+            ->test(FormularioUsuario::class, ['usuario' => $lucia])
             ->set('rol', 'direccion');
 
         $this->actingAs($lucia);
@@ -149,7 +198,7 @@ class RolesTest extends TestCase
     public function test_un_profesional_no_puede_guardar_una_disciplina(): void
     {
         $pantalla = Livewire::actingAs(User::factory()->direccion()->create())
-            ->test(Disciplinas::class)
+            ->test(FormularioDisciplina::class)
             ->set('nombre', 'Psicología');
 
         $this->actingAs(User::factory()->create());
@@ -157,6 +206,40 @@ class RolesTest extends TestCase
         $pantalla->call('guardar')->assertForbidden();
 
         $this->assertDatabaseCount('disciplinas', 0);
+    }
+
+    public function test_un_profesional_no_puede_cambiar_el_nombre_de_una_disciplina(): void
+    {
+        $disciplina = Disciplina::create(['nombre' => 'Psicología']);
+
+        $pantalla = Livewire::actingAs(User::factory()->direccion()->create())
+            ->test(FormularioDisciplina::class, ['disciplina' => $disciplina])
+            ->set('nombre', 'Otro nombre');
+
+        $this->actingAs(User::factory()->create());
+
+        $pantalla->call('guardar')->assertForbidden();
+
+        $this->assertSame('Psicología', $disciplina->fresh()->nombre);
+    }
+
+    public function test_un_profesional_no_puede_abrir_ni_usar_el_listado_de_profesionales(): void
+    {
+        $disciplina = Disciplina::create(['nombre' => 'Psicología']);
+        $lucia = User::factory()->create();
+
+        Livewire::actingAs($lucia)->test(ListaUsuarios::class)->assertForbidden();
+
+        // Tampoco las acciones de la tabla, si la pantalla había quedado abierta con una sesión de Dirección.
+        // Se abre dos veces: después de un 403 la pantalla queda inutilizada y no admite otro pedido.
+        $paraOrdenar = Livewire::actingAs(User::factory()->direccion()->create())->test(ListaUsuarios::class);
+        $paraFiltrar = Livewire::test(ListaUsuarios::class);
+
+        $this->actingAs($lucia);
+
+        // Ni ordenar ni filtrar: el permiso se vuelve a comprobar en cada pedido.
+        $paraOrdenar->call('ordenarPor', 'pacientes')->assertForbidden();
+        $paraFiltrar->set('disciplina', (string) $disciplina->id)->assertForbidden();
     }
 
     public function test_un_profesional_no_puede_guardar_un_paciente_ni_cambiar_su_equipo(): void
@@ -338,24 +421,81 @@ class RolesTest extends TestCase
 
     // ---------------------------------------------------------------- Menú
 
-    public function test_el_menu_muestra_pacientes_disciplinas_y_usuarios_solo_a_direccion(): void
+    public function test_el_menu_muestra_administracion_solo_a_direccion(): void
     {
-        // Se pide el inicio, donde esas palabras solo pueden venir del menú.
+        // Se pide el inicio, donde esa palabra solo puede venir del menú.
         $this->actingAs(User::factory()->create())
             ->get('/')
             ->assertOk()
-            ->assertDontSee('Pacientes')
-            ->assertDontSee('Disciplinas')
-            ->assertDontSee('Usuarios')
-            ->assertSee('Mi perfil');
+            ->assertSee('Inicio')
+            ->assertDontSee('Administración')
+            ->assertDontSee('Profesionales y disciplinas')
+            // Tampoco quedan los links escondidos en el HTML.
+            ->assertDontSee(route('pacientes'), false)
+            ->assertDontSee(route('usuarios'), false)
+            // "Mi perfil" y "Salir" están en el desplegable del nombre: siguen en la página para todos.
+            ->assertSee('Mi perfil')
+            ->assertSee('Salir');
 
         $this->entrarComoDireccion();
 
         $this->get('/')
             ->assertOk()
-            ->assertSee('Pacientes')
-            ->assertSee('Disciplinas')
-            ->assertSee('Usuarios')
-            ->assertSee('Mi perfil');
+            ->assertSee('Inicio')
+            // "Administración" ya no es un link: es un botón que abre un desplegable con sus dos pantallas.
+            ->assertSeeInOrder([
+                'Administración',
+                'href="'.route('pacientes').'"', 'Pacientes',
+                'href="'.route('usuarios').'"', 'Profesionales y disciplinas',
+            ], false)
+            ->assertSee('Mi perfil')
+            ->assertSee('Salir');
+    }
+
+    public function test_el_desplegable_de_administracion_esta_en_todas_las_pantallas_para_direccion(): void
+    {
+        $paciente = $this->crearPaciente();
+        $disciplina = Disciplina::create(['nombre' => 'Psicología']);
+        $direccion = $this->entrarComoDireccion();
+
+        // Las de administración y también las de afuera (inicio, perfil y ficha): ya no hay submenú propio de la zona.
+        $urls = array_merge(
+            $this->urlsDeAdministracion($paciente, $direccion, $disciplina),
+            ['/', '/mi-perfil', "/pacientes/{$paciente->id}"],
+        );
+
+        foreach ($urls as $url) {
+            // Los links están siempre en el HTML: el desplegable solo los oculta hasta que se hace clic.
+            // "Profesionales y disciplinas" no está escrito así en ningún otro lado de la app.
+            $this->get($url)
+                ->assertOk()
+                ->assertSeeInOrder([
+                    'Administración',
+                    'href="'.route('pacientes').'"',
+                    'href="'.route('usuarios').'"', 'Profesionales y disciplinas',
+                ], false);
+        }
+    }
+
+    public function test_el_desplegable_de_administracion_no_esta_en_ninguna_pantalla_para_un_profesional(): void
+    {
+        $paciente = $this->crearPaciente();
+        $lucia = $this->crearProfesionalDelEquipo($paciente);
+        $this->actingAs($lucia);
+
+        // Las tres pantallas a las que puede entrar un profesional.
+        foreach (['/', '/mi-perfil', "/pacientes/{$paciente->id}"] as $url) {
+            $this->get($url)
+                ->assertOk()
+                ->assertDontSee('Administración')
+                ->assertDontSee('Profesionales y disciplinas')
+                ->assertDontSee(route('usuarios'), false);
+        }
+
+        // El link al listado de pacientes se comprueba aparte y sin la ficha: la ficha tiene su propio
+        // "Volver a la lista", que apunta a esa misma dirección y no es parte del menú.
+        foreach (['/', '/mi-perfil'] as $url) {
+            $this->get($url)->assertDontSee(route('pacientes'), false);
+        }
     }
 }

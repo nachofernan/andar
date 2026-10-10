@@ -22,6 +22,7 @@ users (autor) ──< mensajes >── pacientes
 | Campo | Qué guarda |
 |---|---|
 | `nombre` | Nombre de la disciplina. No se puede repetir. |
+| `color` | Color en hexa (ej. `#7c5cf0`) con el que se pintan sus etiquetas. Por defecto, el violeta de la app (`Disciplina::COLOR_INICIAL`). |
 
 ### `users` (los profesionales)
 

@@ -11,13 +11,14 @@ Qué puede hacer cada usuario en la app. Hay **dos roles** y cada usuario tiene 
 
 | | Dirección | Profesional |
 |---|---|---|
-| Listado administrativo de pacientes (`/pacientes`) | Sí | No (ni aparece en el menú) |
+| Entrar a **Administración** (todo lo que cuelga de `/administracion`) | Sí | No (ni aparece en el menú) |
+| Listado administrativo de pacientes | Sí | No |
 | Ver a "mis pacientes" en el Inicio | Los que atiende | Los que atiende |
 | Ver la ficha de un paciente (datos y diagnóstico) | La de todos | Solo la de los que atiende |
 | Crear y editar pacientes, darlos de baja | Sí | No |
 | Armar el equipo de un paciente | Sí | No |
 | Historial de mensajes y archivos de un paciente | **Solo si está en su equipo** | Solo si está en su equipo |
-| Pantallas de Usuarios y Disciplinas | Sí | No (ni aparecen en el menú) |
+| Profesionales y disciplinas: listar, crear y editar | Sí | No |
 | Cambiar los propios datos y la contraseña (Mi perfil) | Sí | Sí |
 
 ## Lo que hay que saber
@@ -29,7 +30,7 @@ Qué puede hacer cada usuario en la app. Hay **dos roles** y cada usuario tiene 
 
 ## Cómo se le da el rol a un usuario
 
-En la pantalla **Usuarios**, con el desplegable **Rol**, al crearlo o al editarlo. Un usuario nuevo viene como Profesional.
+En **Administración › Profesionales y disciplinas**, al crear o editar un profesional, con el desplegable **Rol**. Un usuario nuevo viene como Profesional.
 
 **No se puede dejar al centro sin nadie de Dirección**: si se intenta pasar a Profesional a la única persona de Dirección, la app no lo permite y avisa. Primero hay que darle Dirección a otra persona.
 
@@ -52,7 +53,7 @@ Los roles usan el paquete **Spatie Permission** (solo roles; no se usan "permiso
 | `app/Models/User.php` | `ROLES`, `esDireccion()` y `rol` |
 | `app/Models/Paciente.php` | `puedeVerlo()` y `esDelEquipo()` |
 | `app/Livewire/Concerns/SoloDireccion.php` | El control "solo Dirección" que usan las pantallas de gestión |
-| `app/Livewire/Usuarios.php`, `Disciplinas.php`, `Pacientes/Formulario.php`, `Pacientes/Lista.php` | Pantallas solo de Dirección |
+| `app/Livewire/Pacientes/Lista.php`, `Pacientes/Formulario.php`, `Usuarios/Lista.php`, `Usuarios/Formulario.php`, `Disciplinas/Formulario.php` | Pantallas solo de Dirección (las de `/administracion`) |
 | `app/Livewire/Inicio.php` y `Pacientes/Ficha.php` | Filtran o cortan según el rol y el equipo |
 | `app/Livewire/Perfil.php` | "Mi perfil": la puede abrir cualquier rol, no lleva `SoloDireccion` |
 | `resources/views/layouts/app.blade.php` | El menú, distinto según el rol |

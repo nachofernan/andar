@@ -46,16 +46,18 @@ npm run dev              # recompila solo mientras se programa
 
 Hecho:
 - Login/logout (ver `docs/login.md`). La página de inicio saluda y muestra "Mis pacientes" (ver abajo).
-- Vistas en Tailwind, con barra superior de menú (ver `docs/estilos.md`).
+- Vistas en Tailwind, con barra superior (ver `docs/estilos.md`): menú con Inicio y, para Dirección, **Administración** (todo bajo `/administracion`), que es un desplegable con Pacientes y Profesionales y disciplinas. El nombre del usuario es otro desplegable, con Mi perfil y Salir.
+- Tablas con buscador, filtros y orden en el Inicio y en los dos listados de administración; recuerdan cómo se las dejó durante la sesión (trait `ConTabla`; ver `docs/tablas.md`).
+- Formularios de paciente, profesional y disciplina con secciones a la izquierda y panel fijo a la derecha (piezas `x-formulario.*`; ver `docs/estilos.md`).
 - Base de datos y modelos de profesionales (`User`), `Disciplina` y `Paciente` (ver `docs/modelos.md`). Un profesional puede tener varias disciplinas.
-- Pantallas para listar, crear y editar disciplinas y usuarios, sin borrar (ver `docs/disciplinas-y-usuarios.md`). Solo las usa Dirección. Los usuarios nuevos nacen con contraseña `password`: es provisorio.
+- Profesionales (usuarios) y disciplinas se administran desde una sola pantalla de listado, con los formularios de crear y editar en página aparte; no se borran (ver `docs/disciplinas-y-usuarios.md`). Cada disciplina tiene un color en hexa, que pinta sus etiquetas (va en `style=""`: única excepción a "sin CSS a mano"). Solo las usa Dirección. Los usuarios nuevos nacen con contraseña `password`: es provisorio.
 - Roles y permisos (ver `docs/roles.md`): Dirección carga y edita pacientes, equipos, usuarios y disciplinas, y ve todas las fichas; un Profesional ve solo los pacientes que atiende. El historial de mensajes y los archivos son solo del equipo del paciente, también para Dirección.
-- El Inicio muestra "Mis pacientes": los que atiende el usuario logueado (Dirección o profesional), activos por defecto con un toggle para sumar los inactivos. El listado administrativo (`/pacientes`) pasó a ser exclusivo de Dirección, y desde ahí cada fila lleva directo a editar, no a la ficha (ver `docs/pacientes.md`).
-- "Mi perfil" (`/mi-perfil`): cualquier usuario cambia su nombre, correo, teléfono/WhatsApp (sin cifrar) y su contraseña (ver `docs/perfil.md`).
+- El Inicio muestra tarjetas de resumen y la tabla "Mis pacientes": los que atiende el usuario logueado (Dirección o profesional), activos por defecto, con la última actividad de cada uno y los que tienen mensajes sin leer siempre arriba. El listado administrativo (`/administracion/pacientes`) es exclusivo de Dirección, y desde ahí cada fila lleva directo a editar, no a la ficha (ver `docs/pacientes.md`).
+- "Mi perfil" (`/mi-perfil`, se entra desde el nombre del usuario): cualquier usuario cambia su nombre, correo, teléfono/WhatsApp (sin cifrar) y su contraseña (ver `docs/perfil.md`).
 - Pantallas de pacientes: ficha, crear y editar, con asignación del equipo de profesionales; no se borran, se dan de baja con "Activo" (ver `docs/pacientes.md`).
 - Historial de mensajes del equipo en la ficha del paciente, con tipos (mensaje, informe, indicación, nota). Solo lo ve y escribe el equipo del paciente; no se editan ni se borran (ver `docs/mensajes.md`).
 - Archivos adjuntos a los mensajes (PDF, Word, Excel, imágenes; 5 por mensaje, 10 MB), cifrados y con descarga solo para el equipo.
-- Avisos de mensajes sin leer dentro de la app: en el menú, en el listado administrativo y en "Mis pacientes" del inicio. Se marcan leídos al abrir la ficha.
+- Avisos de mensajes sin leer dentro de la app: un puntito rojo en el menú y, en "Mis pacientes" del inicio, la cantidad por paciente. Se marcan leídos al abrir la ficha.
 - Zona horaria de la app: Argentina (`config/app.php`).
 - Cifrado de datos sensibles: `dni` y `diagnostico` del paciente, el texto de los mensajes y los archivos adjuntos se guardan cifrados con `APP_KEY` (ver `docs/cifrado.md`). **Si se pierde `APP_KEY` no se recuperan.**
 - Provisorio: el login viene precargado con el usuario de ejemplo (`app/Livewire/Login.php`); sacarlo antes de usar datos reales.
@@ -64,7 +66,7 @@ Datos de ejemplo (`php artisan migrate:fresh --seed`): 6 disciplinas, 8 usuarios
 
 ## Pendiente (a definir con el dueño, no construir hasta que se pida)
 
-Diseño y usabilidad de lo hecho hasta acá: es la etapa siguiente. Sacar el login precargado, antes de usar datos reales.
+Diseño y usabilidad: ya se rediseñaron para desktop las pantallas principales (index) y los formularios de administración. Siguen la ficha del paciente y Mi perfil, y después mobile. Sacar el login precargado, antes de usar datos reales.
 
 ## Otros centros (decisión tomada)
 
