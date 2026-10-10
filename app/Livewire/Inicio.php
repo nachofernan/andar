@@ -2,26 +2,30 @@
 
 namespace App\Livewire;
 
-use App\Models\Paciente;
 use Livewire\Component;
 
 /**
  * Página de inicio (la primera después de iniciar sesión).
- * Saluda y avisa en qué pacientes hay mensajes sin leer.
+ * Muestra "mis pacientes": los que atiende el usuario logueado, con el aviso
+ * de mensajes sin leer de cada uno.
  *
  * Vista: resources/views/livewire/inicio.blade.php
  */
 class Inicio extends Component
 {
+    /** Si está tildado, la lista también trae los pacientes dados de baja. */
+    public bool $verInactivos = false;
+
     public function render()
     {
-        // "id del paciente => cantidad de mensajes sin leer" (ver User::mensajesSinLeer).
-        $sinLeer = auth()->user()->mensajesSinLeer();
+        $usuario = auth()->user();
 
         return view('livewire.inicio', [
-            'sinLeer' => $sinLeer,
-            // Los pacientes que tienen alguno, para mostrar su nombre y el link a la ficha.
-            'pacientes' => Paciente::whereIn('id', $sinLeer->keys())->orderBy('apellido')->orderBy('nombre')->get(),
+            // "id del paciente => cantidad de mensajes sin leer" (ver User::mensajesSinLeer).
+            'sinLeer' => $usuario->mensajesSinLeer(),
+            'pacientes' => $usuario->pacientes()
+                ->when(! $this->verInactivos, fn ($consulta) => $consulta->where('activo', true))
+                ->orderBy('apellido')->orderBy('nombre')->get(),
         ]);
     }
 }

@@ -91,6 +91,7 @@ class RolesTest extends TestCase
 
         $this->get('/disciplinas')->assertForbidden();
         $this->get('/usuarios')->assertForbidden();
+        $this->get('/pacientes')->assertForbidden(); // El listado administrativo es solo de Dirección.
         $this->get('/pacientes/crear')->assertForbidden();
         $this->get("/pacientes/{$paciente->id}/editar")->assertForbidden();
     }
@@ -103,6 +104,7 @@ class RolesTest extends TestCase
 
         $this->get('/disciplinas')->assertOk();
         $this->get('/usuarios')->assertOk();
+        $this->get('/pacientes')->assertOk();
         $this->get('/pacientes/crear')->assertOk();
         $this->get("/pacientes/{$paciente->id}/editar")->assertOk();
     }
@@ -187,24 +189,14 @@ class RolesTest extends TestCase
         $this->assertDatabaseMissing('paciente_user', ['user_id' => $pedro->id]);
     }
 
-    // ---------------------------------------------------------------- Lista de pacientes
+    // ---------------------------------------------------------------- Lista de pacientes (administración)
 
-    public function test_un_profesional_ve_en_la_lista_solo_los_pacientes_de_su_equipo(): void
+    public function test_un_profesional_no_puede_abrir_el_listado_administrativo(): void
     {
-        $ana = $this->crearPaciente('Ana', 'Zapata', '52118304');
-        $bruno = $this->crearPaciente('Bruno', 'Arnal', '40111222');
-        $this->crearPaciente('Carla', 'Molina', '45333444'); // Sin equipo: tampoco es de Lucía.
-        $lucia = $this->crearProfesionalDelEquipo($ana, 'Lucía Pérez');
-        $this->crearProfesionalDelEquipo($bruno, 'Marta Díaz'); // A Bruno lo atiende otra persona.
+        $paciente = $this->crearPaciente();
+        $lucia = $this->crearProfesionalDelEquipo($paciente); // Aunque sea del equipo, la pantalla es de Dirección.
 
-        Livewire::actingAs($lucia)
-            ->test(Lista::class)
-            ->assertSee('Zapata, Ana')
-            ->assertDontSee('Arnal, Bruno')
-            ->assertDontSee('40.111.222') // Ni el nombre ni el DNI de un paciente ajeno.
-            ->assertDontSee('Molina, Carla')
-            // Solo Dirección carga pacientes: no se le ofrece el botón.
-            ->assertDontSee('Nuevo paciente');
+        Livewire::actingAs($lucia)->test(Lista::class)->assertForbidden();
     }
 
     public function test_direccion_ve_en_la_lista_todos_los_pacientes_aunque_no_sea_de_ningun_equipo(): void
@@ -219,18 +211,6 @@ class RolesTest extends TestCase
             ->assertSee('Zapata, Ana')
             ->assertSee('Arnal, Bruno')
             ->assertSee('Nuevo paciente');
-    }
-
-    public function test_a_un_profesional_sin_pacientes_la_lista_le_avisa_que_no_tiene_asignados(): void
-    {
-        $this->crearPaciente(); // Hay un paciente cargado, pero no es suyo.
-
-        // El aviso es distinto del de Dirección ("Todavía no hay pacientes cargados."), que acá sería falso.
-        Livewire::actingAs(User::factory()->create())
-            ->test(Lista::class)
-            ->assertSee('Todavía no tenés pacientes asignados.')
-            ->assertDontSee('Todavía no hay pacientes cargados.')
-            ->assertDontSee('Zapata, Ana');
     }
 
     // ---------------------------------------------------------------- Ficha
@@ -358,15 +338,16 @@ class RolesTest extends TestCase
 
     // ---------------------------------------------------------------- Menú
 
-    public function test_el_menu_muestra_disciplinas_y_usuarios_solo_a_direccion(): void
+    public function test_el_menu_muestra_pacientes_disciplinas_y_usuarios_solo_a_direccion(): void
     {
-        // Se pide el inicio, donde esas dos palabras solo pueden venir del menú.
+        // Se pide el inicio, donde esas palabras solo pueden venir del menú.
         $this->actingAs(User::factory()->create())
             ->get('/')
             ->assertOk()
-            ->assertSee('Pacientes')
+            ->assertDontSee('Pacientes')
             ->assertDontSee('Disciplinas')
-            ->assertDontSee('Usuarios');
+            ->assertDontSee('Usuarios')
+            ->assertSee('Mi perfil');
 
         $this->entrarComoDireccion();
 
@@ -374,6 +355,7 @@ class RolesTest extends TestCase
             ->assertOk()
             ->assertSee('Pacientes')
             ->assertSee('Disciplinas')
-            ->assertSee('Usuarios');
+            ->assertSee('Usuarios')
+            ->assertSee('Mi perfil');
     }
 }

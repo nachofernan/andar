@@ -223,9 +223,9 @@ class MensajesSinLeerTest extends TestCase
         $this->assertSame(2, substr_count($html, 'Nuevo'));
     }
 
-    // ---------------------------------------------------------------- Inicio
+    // ---------------------------------------------------------------- Inicio ("mis pacientes")
 
-    public function test_el_inicio_lista_los_pacientes_con_mensajes_sin_leer_y_su_cantidad(): void
+    public function test_el_inicio_lista_todos_mis_pacientes_con_la_cantidad_de_sin_leer_de_cada_uno(): void
     {
         $ana = $this->crearPaciente('Ana', 'Zapata', '52118304');
         $bruno = $this->crearPaciente('Bruno', 'Arnal', '40111222');
@@ -242,33 +242,31 @@ class MensajesSinLeerTest extends TestCase
             ->get('/')
             ->assertOk()
             ->assertSeeLivewire(Inicio::class)
-            // Un renglón por paciente, ordenados por apellido, cada uno con su cantidad al lado.
-            ->assertSeeInOrder(['Mensajes sin leer', 'Arnal, Bruno', '>1</span>', 'Zapata, Ana', '>2</span>'], false)
-            ->assertDontSee('Molina, Carla')
-            ->assertDontSee('No tenés mensajes sin leer.');
+            // Un renglón por cada paciente de su equipo, ordenados por apellido, con su cantidad al lado si tiene.
+            ->assertSeeInOrder(['Mis pacientes', 'Arnal, Bruno', '>1</span>', 'Molina, Carla', 'Zapata, Ana', '>2</span>'], false)
+            ->assertDontSee('Todavía no tenés pacientes asignados.');
     }
 
-    public function test_el_inicio_avisa_cuando_no_hay_mensajes_sin_leer(): void
+    public function test_el_inicio_avisa_cuando_no_tengo_pacientes_asignados(): void
     {
         Livewire::actingAs(User::factory()->create())
             ->test(Inicio::class)
-            ->assertSee('No tenés mensajes sin leer.');
+            ->assertSee('Todavía no tenés pacientes asignados.');
     }
 
-    // ---------------------------------------------------------------- Lista de pacientes
+    // ---------------------------------------------------------------- Lista administrativa de pacientes
 
-    public function test_la_lista_de_pacientes_muestra_el_globito_solo_en_los_que_tienen_mensajes_sin_leer(): void
+    public function test_la_lista_administrativa_muestra_el_globito_solo_en_los_que_tienen_mensajes_sin_leer(): void
     {
         $ana = $this->crearPaciente('Ana', 'Zapata', '52118304');
         $bruno = $this->crearPaciente('Bruno', 'Arnal', '40111222');
-        $lucia = $this->crearProfesionalDelEquipo($ana, 'Lucía Pérez');
+        $direccion = $this->entrarComoDireccion();
         $marta = $this->crearProfesionalDelEquipo($ana, 'Marta Díaz');
-        $bruno->profesionales()->attach([$lucia->id, $marta->id]);
+        $ana->profesionales()->attach($direccion->id); // Dirección también la atiende: le llegan mensajes.
         $this->crearMensaje($ana, $marta);
         $this->crearMensaje($ana, $marta);
 
-        $html = Livewire::actingAs($lucia)
-            ->test(Lista::class)
+        $html = Livewire::test(Lista::class)
             // El globito va al lado del nombre de Ana, con su cantidad.
             ->assertSeeInOrder(['Arnal, Bruno', 'Zapata, Ana', self::GLOBITO.'2</span>'], false)
             ->html();
@@ -290,7 +288,8 @@ class MensajesSinLeerTest extends TestCase
         $this->crearMensaje($ana, $marta);
         $this->crearMensaje($bruno, $marta);
 
-        // Se pide el inicio, que no usa este globito (ahí las cantidades van sin el title): el único que puede aparecer es el del menú.
+        // Se pide el inicio: el menú suma los 3 sin leer de todos los pacientes, un número que no coincide
+        // con ninguno de los globitos por paciente del bloque "Mis pacientes" (1 y 2).
         $this->actingAs($lucia)
             ->get('/')
             ->assertOk()

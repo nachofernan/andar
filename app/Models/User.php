@@ -19,7 +19,7 @@ use Spatie\Permission\Traits\HasRoles;
  *
  * HasRoles (Spatie Permission) le agrega syncRoles(), hasRole(), etc. Los roles están en la constante ROLES.
  */
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['name', 'email', 'telefono', 'password'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {

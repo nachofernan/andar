@@ -28,9 +28,7 @@ Por dentro, cada componente tiene la propiedad `editandoId`: si está vacía se 
 - **Rol**: Dirección o Profesional. Un usuario nuevo viene como Profesional. No se puede pasar a Profesional a la única persona de Dirección (ver `docs/roles.md`).
 - **Disciplinas**: hay una casilla por cada disciplina cargada. Se pueden tildar **varias** (por ejemplo, alguien que es psicóloga y psicopedagoga), una sola o ninguna (por ejemplo, administración). Al editar, destildar una y guardar se la quita.
 - En la lista, las disciplinas de cada usuario aparecen separadas por coma.
-- **Contraseña**: no hay campo. Todo usuario nuevo se crea con la contraseña **`password`** (constante `CONTRASENA_INICIAL` en `app/Livewire/Usuarios.php`). Editar un usuario no cambia su contraseña.
-
-> Esto es provisorio: todavía no existe una forma de cambiar o renovar la contraseña. Hay que resolverlo antes de usar la app con datos reales.
+- **Contraseña**: no hay campo acá. Todo usuario nuevo se crea con la contraseña **`password`** (constante `CONTRASENA_INICIAL` en `app/Livewire/Usuarios.php`). Editar un usuario desde esta pantalla no cambia su contraseña: cada uno cambia la suya desde **Mi perfil** (ver `docs/perfil.md`).
 
 ## Archivos
 

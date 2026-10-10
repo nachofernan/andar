@@ -2,10 +2,7 @@
 <div class="grid gap-4">
     <div class="flex items-center justify-between gap-4">
         <h1 class="text-[22px] font-bold">Pacientes</h1>
-        {{-- Solo Dirección carga pacientes. --}}
-        @if (auth()->user()->esDireccion())
-            <a href="{{ route('pacientes.crear') }}" class="rounded-xl bg-brand px-4 py-2.5 font-semibold text-white transition-colors hover:bg-brand-dark">Nuevo paciente</a>
-        @endif
+        <a href="{{ route('pacientes.crear') }}" class="rounded-xl bg-brand px-4 py-2.5 font-semibold text-white transition-colors hover:bg-brand-dark">Nuevo paciente</a>
     </div>
 
     <div class="overflow-x-auto rounded-[20px] bg-white p-2 shadow-[0_10px_40px] shadow-brand/15">
@@ -23,8 +20,8 @@
                 @forelse ($pacientes as $paciente)
                     <tr wire:key="paciente-{{ $paciente->id }}" class="border-t border-line">
                         <td class="px-4 py-3">
-                            {{-- El nombre lleva a la ficha del paciente. --}}
-                            <a href="{{ route('pacientes.ver', $paciente) }}" class="font-semibold text-brand hover:text-brand-dark">{{ $paciente->nombre_completo }}</a>
+                            {{-- El nombre lleva directo a editar al paciente (esta pantalla es de administración). --}}
+                            <a href="{{ route('pacientes.editar', $paciente) }}" class="font-semibold text-brand hover:text-brand-dark">{{ $paciente->nombre_completo }}</a>
                             {{-- Globito con los mensajes sin leer de este paciente (solo si soy de su equipo y hay alguno). --}}
                             @if ($sinLeer->has($paciente->id))
                                 <span class="ml-1 rounded-full bg-brand px-1.5 py-0.5 text-xs font-semibold text-white" title="Mensajes sin leer">{{ $sinLeer[$paciente->id] }}</span>
@@ -43,7 +40,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="px-4 py-6 text-center text-muted">{{ auth()->user()->esDireccion() ? 'Todavía no hay pacientes cargados.' : 'Todavía no tenés pacientes asignados.' }}</td>
+                        <td colspan="5" class="px-4 py-6 text-center text-muted">Todavía no hay pacientes cargados.</td>
                     </tr>
                 @endforelse
             </tbody>

@@ -11,12 +11,14 @@ Qué puede hacer cada usuario en la app. Hay **dos roles** y cada usuario tiene 
 
 | | Dirección | Profesional |
 |---|---|---|
-| Ver la lista de pacientes | Todos | Solo los que atiende |
+| Listado administrativo de pacientes (`/pacientes`) | Sí | No (ni aparece en el menú) |
+| Ver a "mis pacientes" en el Inicio | Los que atiende | Los que atiende |
 | Ver la ficha de un paciente (datos y diagnóstico) | La de todos | Solo la de los que atiende |
 | Crear y editar pacientes, darlos de baja | Sí | No |
 | Armar el equipo de un paciente | Sí | No |
 | Historial de mensajes y archivos de un paciente | **Solo si está en su equipo** | Solo si está en su equipo |
 | Pantallas de Usuarios y Disciplinas | Sí | No (ni aparecen en el menú) |
+| Cambiar los propios datos y la contraseña (Mi perfil) | Sí | Sí |
 
 ## Lo que hay que saber
 
@@ -50,8 +52,9 @@ Los roles usan el paquete **Spatie Permission** (solo roles; no se usan "permiso
 | `app/Models/User.php` | `ROLES`, `esDireccion()` y `rol` |
 | `app/Models/Paciente.php` | `puedeVerlo()` y `esDelEquipo()` |
 | `app/Livewire/Concerns/SoloDireccion.php` | El control "solo Dirección" que usan las pantallas de gestión |
-| `app/Livewire/Usuarios.php`, `Disciplinas.php`, `Pacientes/Formulario.php` | Pantallas solo de Dirección |
-| `app/Livewire/Pacientes/Lista.php` y `Ficha.php` | Filtran o cortan según el rol y el equipo |
+| `app/Livewire/Usuarios.php`, `Disciplinas.php`, `Pacientes/Formulario.php`, `Pacientes/Lista.php` | Pantallas solo de Dirección |
+| `app/Livewire/Inicio.php` y `Pacientes/Ficha.php` | Filtran o cortan según el rol y el equipo |
+| `app/Livewire/Perfil.php` | "Mi perfil": la puede abrir cualquier rol, no lleva `SoloDireccion` |
 | `resources/views/layouts/app.blade.php` | El menú, distinto según el rol |
 | `database/factories/UserFactory.php` | En los tests: `create()` da un profesional y `direccion()` uno de Dirección |
 | `tests/Feature/RolesTest.php` | Pruebas de los permisos |
@@ -62,4 +65,4 @@ Por ejemplo "Administración": se agrega a `User::ROLES`, se crea con una migrac
 
 ## Pendiente
 
-Cambio de contraseña (hoy todos nacen con `password`) y sacar el login precargado, antes de usar datos reales.
+Sacar el login precargado, antes de usar datos reales (ver `docs/login.md`). El cambio de contraseña ya existe, en **Mi perfil** (`docs/perfil.md`).

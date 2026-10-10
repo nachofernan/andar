@@ -45,9 +45,9 @@ La app avisa cuando hay mensajes que todavía no viste. No manda mails ni notifi
 
 | Lugar | Qué muestra |
 |---|---|
-| Menú de arriba | Un globito violeta al lado de **Pacientes** con el total de mensajes sin leer. Si no hay, no aparece. |
-| Lista de pacientes | Un globito al lado del nombre de cada paciente que tiene mensajes sin leer, con la cantidad. |
-| Inicio | El bloque **Mensajes sin leer**: un renglón por paciente, con la cantidad y link a su ficha. |
+| Menú de arriba | Un globito violeta al lado de **Inicio** con el total de mensajes sin leer. Si no hay, no aparece. |
+| Inicio | El bloque **Mis pacientes**: un renglón por cada paciente que atendés, con un globito al lado del nombre si tiene mensajes sin leer, y link a su ficha. |
+| Listado administrativo de pacientes (`/pacientes`, solo Dirección) | Un globito al lado del nombre de cada paciente que tiene mensajes sin leer, con la cantidad. |
 | Historial | Los mensajes que no habías visto aparecen resaltados y con la etiqueta **Nuevo**, durante esa visita. |
 
 A tener en cuenta:
@@ -81,8 +81,8 @@ Están en un solo lugar: la lista `TIPOS` de `app/Models/Mensaje.php`. A la izqu
 | `app/Livewire/Pacientes/Mensajes.php` | Lógica: enviar, adjuntar, filtrar, listar y marcar como leído |
 | `resources/views/livewire/pacientes/mensajes.blade.php` | La vista del bloque |
 | `app/Http/Controllers/AdjuntoController.php` | Descarga de un adjunto (`/adjuntos/{id}`) |
-| `app/Livewire/Inicio.php` y `resources/views/livewire/inicio.blade.php` | Página de inicio con los mensajes sin leer |
-| `app/Livewire/Pacientes/Lista.php` y `resources/views/layouts/app.blade.php` | Globitos de la lista y del menú |
+| `app/Livewire/Inicio.php` y `resources/views/livewire/inicio.blade.php` | Página de inicio: "Mis pacientes" y sus mensajes sin leer |
+| `app/Livewire/Pacientes/Lista.php` y `resources/views/layouts/app.blade.php` | Globito del listado administrativo y del menú |
 | `database/seeders/MensajeSeeder.php` | Mensajes de ejemplo (sin adjuntos) |
 | `tests/Feature/MensajesTest.php`, `AdjuntosTest.php`, `MensajesSinLeerTest.php` | Pruebas |
 

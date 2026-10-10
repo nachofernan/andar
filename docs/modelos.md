@@ -25,7 +25,7 @@ users (autor) ──< mensajes >── pacientes
 
 ### `users` (los profesionales)
 
-Es la tabla de usuarios de Laravel, tal cual viene (`name`, `email`, `password`): quien inicia sesión es un profesional. Sus disciplinas no están acá, sino en `disciplina_user`.
+Es la tabla de usuarios de Laravel (`name`, `email`, `password`), con una columna agregada: `telefono` (opcional, sin cifrar: es contacto laboral, no un dato clínico del paciente; ver `docs/cifrado.md`). Cada uno edita sus propios datos desde **Mi perfil** (`docs/perfil.md`). Sus disciplinas no están acá, sino en `disciplina_user`.
 
 ### `disciplina_user`
 
@@ -84,6 +84,7 @@ Como los archivos van cifrados, varias columnas no dicen lo que su nombre sugier
 | `database/migrations/2026_10_09_000004_create_paciente_user_table.php` | Crea la tabla intermedia |
 | `database/migrations/2026_10_09_111213_create_media_table.php` | Crea `media` (Media Library) |
 | `database/migrations/2026_10_09_120000_create_mensajes_table.php` | Crea `mensajes` |
+| `database/migrations/2026_10_09_203516_add_telefono_a_users_table.php` | Agrega `telefono` a `users` |
 | `app/Models/Mensaje.php` | Modelo. `->paciente` y `->autor` |
 | `app/Models/Disciplina.php` | Modelo. `->profesionales` |
 | `app/Models/Paciente.php` | Modelo. `->profesionales`, `->mensajes` y `esDelEquipo($usuario)` |

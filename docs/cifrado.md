@@ -13,8 +13,11 @@ Andar guarda datos de salud de menores. La ley argentina de datos personales (25
 | `mensajes` | tipo, autor, paciente y fecha | No |
 | Archivos adjuntos | contenido y nombre original | Sí |
 | Archivos adjuntos | tipo, tamaño y fecha | No |
+| `users` | `email`, `telefono` | No |
 
 `nombre` y `apellido` no se cifran porque la lista de pacientes se ordena por apellido, y un campo cifrado no se puede ordenar (ver "Límites"). Esos datos quedan protegidos por las medidas del servidor (ver "Pendiente para cuando se publique").
+
+`email` y `telefono` de `users` tampoco se cifran: son datos de contacto laboral del equipo (no datos clínicos del paciente), y el email además necesita ser único y buscable (para el login), algo que un campo cifrado no permite (ver "Límites").
 
 ## Cómo funciona
 
@@ -98,7 +101,7 @@ El cifrado por campo es una capa. Para cumplir de verdad faltan, del lado del se
 - Backups cifrados, con `APP_KEY` guardada aparte.
 - HTTPS obligatorio.
 
-Y del lado de la app, ya anotado como pendiente: contraseñas reales (hoy todos nacen con `password`) y sacar el login precargado.
+Y del lado de la app, ya anotado como pendiente en `docs/roles.md`: sacar el login precargado.
 
 ## Archivos
 

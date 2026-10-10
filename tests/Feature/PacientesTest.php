@@ -101,8 +101,10 @@ class PacientesTest extends TestCase
 
     public function test_con_sesion_la_lista_de_pacientes_se_muestra(): void
     {
-        $this->actingAs(User::factory()->create())
-            ->get('/pacientes')
+        // El listado administrativo es solo de Dirección (un profesional recibe 403, ver RolesTest).
+        $this->entrarComoDireccion();
+
+        $this->get('/pacientes')
             ->assertOk()
             ->assertSeeLivewire(Lista::class);
     }
@@ -167,6 +169,17 @@ class PacientesTest extends TestCase
                 'Zapata, Ana', '52.118.304', 'Inactivo',
             ])
             ->assertDontSee('Todavía no hay pacientes cargados.');
+    }
+
+    public function test_el_nombre_en_la_lista_lleva_directo_a_editar_no_a_la_ficha(): void
+    {
+        $paciente = $this->crearPaciente();
+
+        $html = $this->lista()->html();
+
+        // Con comillas, para no confundir el link a la ficha con el de editar (uno es prefijo del otro).
+        $this->assertStringContainsString('href="'.route('pacientes.editar', $paciente).'"', $html);
+        $this->assertStringNotContainsString('href="'.route('pacientes.ver', $paciente).'"', $html);
     }
 
     public function test_la_lista_muestra_los_nombres_del_equipo_de_cada_paciente(): void
