@@ -15,7 +15,8 @@
 <body class="min-h-screen bg-linear-to-br from-[#efeaff] to-[#e4f6f6] bg-fixed font-sans text-ink">
     @auth
         {{-- Barra superior: solo con sesión iniciada. --}}
-        <header class="border-b border-line bg-white">
+        {{-- max-md:relative: en mobile, el panel del menú ☰ se ubica respecto de la barra (ver más abajo). --}}
+        <header class="border-b border-line bg-white max-md:relative">
             <div class="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
                 <a href="{{ route('inicio') }}" class="flex items-center gap-2">
                     <span class="grid size-8 place-items-center rounded-full bg-linear-to-br from-brand to-accent font-bold text-white">A</span>
@@ -29,7 +30,8 @@
                     // ¿Estamos en alguna pantalla de administración? (todas cuelgan de /administracion)
                     $enAdministracion = request()->is('administracion*');
                 @endphp
-                <nav class="flex items-center gap-8 text-sm font-medium">
+                {{-- max-md:hidden: en mobile este menú no se ve; lo reemplaza el botón ☰ de más abajo (ver docs/mobile.md). --}}
+                <nav class="flex items-center gap-8 text-sm font-medium max-md:hidden">
                     {{-- "Mis pacientes" es el Inicio. También queda marcado en la ficha de un paciente, porque se llega desde ahí. --}}
                     <a href="{{ route('inicio') }}" class="relative {{ request()->routeIs('inicio', 'pacientes.ver') ? 'text-brand' : 'text-muted hover:text-brand' }}">
                         Mis pacientes
@@ -70,7 +72,7 @@
                     Nombre del usuario: al hacer clic abre un menú chico con "Mi perfil" y "Salir".
                     Abrir y cerrar lo maneja Alpine (viene incluido con Livewire): "abierto" es true o false.
                 --}}
-                <div class="relative ml-auto text-sm" x-data="{ abierto: false }" @click.outside="abierto = false">
+                <div class="relative ml-auto text-sm max-md:hidden" x-data="{ abierto: false }" @click.outside="abierto = false">
                     <button type="button" @click="abierto = ! abierto"
                         class="flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1.5 font-medium transition-colors hover:bg-brand-soft {{ request()->routeIs('perfil') ? 'text-brand' : '' }}">
                         {{ auth()->user()->name }}
@@ -86,10 +88,56 @@
                         </form>
                     </div>
                 </div>
+
+                {{--
+                    Menú de mobile (md:hidden: de 768 px para arriba no existe). Un botón ☰ a la derecha que abre,
+                    debajo de la barra, un panel con todo lo que en desktop está repartido entre el menú y el nombre.
+                    Abrir y cerrar lo maneja Alpine, igual que los desplegables de arriba.
+                --}}
+                <div class="ml-auto md:hidden" x-data="{ abierto: false }" @click.outside="abierto = false">
+                    <button type="button" @click="abierto = ! abierto" aria-label="Menú"
+                        class="relative grid size-10 cursor-pointer place-items-center rounded-lg text-xl text-brand hover:bg-brand-soft">
+                        ☰
+                        {{-- El mismo puntito rojo de "Mis pacientes": hay mensajes sin leer. --}}
+                        @if ($sinLeer > 0)
+                            <span class="absolute right-1.5 top-1.5 size-2 rounded-full bg-red-500" title="Tenés mensajes sin leer"></span>
+                        @endif
+                    </button>
+
+                    {{-- El panel: ocupa todo el ancho, pegado debajo de la barra (top-full). Arranca oculto. --}}
+                    <div x-show="abierto" style="display: none" class="absolute inset-x-0 top-full z-20 grid gap-0.5 border-b border-line bg-white p-2 shadow-lg">
+                        <p class="px-3 pb-1 pt-2 text-xs text-muted">{{ auth()->user()->name }}</p>
+
+                        <a href="{{ route('inicio') }}" class="flex items-center gap-2 rounded-lg px-3 py-3 hover:bg-brand-soft {{ request()->routeIs('inicio', 'pacientes.ver') ? 'font-semibold text-brand' : '' }}">
+                            Mis pacientes
+                            @if ($sinLeer > 0)
+                                <span class="size-2 rounded-full bg-red-500"></span>
+                            @endif
+                        </a>
+
+                        {{-- Las pantallas de Administración, solo para Dirección: la misma lista del desplegable de desktop. --}}
+                        @if (auth()->user()->esDireccion())
+                            <p class="px-3 pb-1 pt-3 text-xs text-muted">Administración</p>
+                            @foreach ($administracion as $texto => [$ruta, $activaEn])
+                                <a href="{{ route($ruta) }}" class="rounded-lg px-3 py-3 hover:bg-brand-soft {{ request()->routeIs(...$activaEn) ? 'font-semibold text-brand' : '' }}">{{ $texto }}</a>
+                            @endforeach
+                        @endif
+
+                        <div class="mt-1 grid gap-0.5 border-t border-line pt-1">
+                            <a href="{{ route('perfil') }}" class="rounded-lg px-3 py-3 hover:bg-brand-soft {{ request()->routeIs('perfil') ? 'font-semibold text-brand' : '' }}">Mi perfil</a>
+                            {{-- Salir es un POST (no un link), igual que en desktop. --}}
+                            <form method="POST" action="{{ route('logout') }}">
+                                @csrf
+                                <button type="submit" class="block w-full cursor-pointer rounded-lg px-3 py-3 text-left hover:bg-brand-soft">Salir</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
             </div>
         </header>
 
-        <main class="mx-auto max-w-6xl p-4">
+        {{-- max-md:p-3: en mobile, un poco menos de margen a los costados. --}}
+        <main class="mx-auto max-w-6xl p-4 max-md:p-3">
             {{ $slot }}
         </main>
     @else

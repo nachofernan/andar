@@ -4,7 +4,7 @@
 --}}
 @php
     // Clases de los controles (input), para no repetirlas en cada campo.
-    $control = 'rounded-xl border-[1.5px] border-line px-3.5 py-[11px] font-normal outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15';
+    $control = 'rounded-xl border-[1.5px] border-line px-3.5 py-[11px] font-normal outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15 max-md:text-base';
 
 @endphp
 
@@ -13,12 +13,13 @@
         <a href="{{ route('usuarios') }}" class="text-sm font-medium text-muted hover:text-brand">← Volver a profesionales</a>
     </div>
 
-    <div class="grid grid-cols-[1fr_22rem] items-start gap-4">
+    {{-- Mobile (max-md:): una sola columna, los campos de a uno por renglón y el panel al final, sin quedar fijo (ver docs/mobile.md). --}}
+    <div class="grid grid-cols-[1fr_22rem] items-start gap-4 max-md:grid-cols-1">
         {{-- Columna izquierda: datos y acceso. --}}
         <div class="grid gap-4">
             <x-formulario.seccion titulo="Datos">
-                <div class="grid grid-cols-2 gap-3">
-                    <x-formulario.campo nombre="Nombre" error="name" class="col-span-2">
+                <div class="grid grid-cols-2 gap-3 max-md:grid-cols-1">
+                    <x-formulario.campo nombre="Nombre" error="name" class="col-span-2 max-md:col-span-1">
                         <input type="text" wire:model="name" class="{{ $control }}">
                     </x-formulario.campo>
 
@@ -58,7 +59,7 @@
         </div>
 
         {{-- Columna derecha: queda fija al bajar con el scroll (sticky), así los botones están siempre a la vista. --}}
-        <aside class="sticky top-4 grid gap-4">
+        <aside class="sticky top-4 grid gap-4 max-md:static">
             {{-- Disciplinas: un renglón por cada una. Se pueden tildar varias, o ninguna. --}}
             <x-formulario.seccion titulo="Disciplinas" ayuda="Puede tener varias o ninguna.">
                 <div class="-mx-2 grid gap-1">

@@ -51,6 +51,10 @@ Los dos desplegables se abren y se cierran con **Alpine** (`x-data`, `@click`, `
 - Las pantallas Livewire lo usan solas.
 - Una vista común (que no sea de Livewire) lo usaría envolviendo su contenido en `<x-layouts::app> ... </x-layouts::app>`. Hoy no hay ninguna: todas las pantallas son de Livewire.
 
+## Mobile
+
+En el celular las pantallas se acomodan con clases que empiezan con `max-md:` o con `md:hidden`; el resto de las clases es desktop. La regla y qué cambia en cada pantalla: `docs/mobile.md`.
+
 ## Tablas
 
 Las tablas con buscador, filtros y orden comparten sus piezas: ver `docs/tablas.md`.

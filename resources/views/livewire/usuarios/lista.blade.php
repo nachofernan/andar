@@ -1,7 +1,8 @@
 {{-- Vista de App\Livewire\Usuarios\Lista: tabla de disciplinas a la izquierda (angosta) y tabla de profesionales a la derecha. --}}
-<div class="grid grid-cols-[24rem_1fr] items-start gap-8">
+{{-- Mobile (max-md:): una tarjeta debajo de la otra, con Profesionales primero (por eso Disciplinas lleva order-last). --}}
+<div class="grid grid-cols-[24rem_1fr] items-start gap-8 max-md:grid-cols-1 max-md:gap-4">
     {{-- Disciplinas: tabla angosta. Clic en una fila lleva a su pantalla, donde se ve y se edita. --}}
-    <div class="grid gap-4">
+    <div class="grid gap-4 max-md:order-last">
         <div class="grid gap-2 rounded-[20px] bg-white p-2 shadow-[0_10px_40px] shadow-brand/15">
             {{-- Cabecera de la tarjeta: título con la cantidad y, a la derecha, el link para cargar una nueva. --}}
             <div class="flex items-center justify-between gap-3 px-4 pt-4">
@@ -61,11 +62,12 @@
             {{-- Buscador y filtro. wire:model.live vuelve a armar la tabla apenas cambian. --}}
             <div class="flex flex-wrap items-center gap-3 px-4 pt-2">
                 {{-- debounce: espera a que se deje de escribir un instante, para no consultar en cada tecla. --}}
+                {{-- Mobile (max-md:): buscador y filtro a todo el ancho, con letra de 16 px para que el iPhone no haga zoom. --}}
                 <input type="search" wire:model.live.debounce.300ms="buscar" placeholder="Buscar por nombre o email…"
-                    class="mr-auto w-72 rounded-xl border-[1.5px] border-line px-3.5 py-2 text-sm outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15">
+                    class="mr-auto w-72 rounded-xl border-[1.5px] border-line px-3.5 py-2 text-sm outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15 max-md:w-full max-md:text-base">
 
                 <select wire:model.live="disciplina"
-                    class="rounded-xl border-[1.5px] border-line bg-white px-3.5 py-2 text-sm outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15">
+                    class="rounded-xl border-[1.5px] border-line bg-white px-3.5 py-2 text-sm outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15 max-md:w-full max-md:text-base">
                     <option value="">Todas las disciplinas</option>
                     @foreach ($disciplinas as $opcion)
                         <option value="{{ $opcion->id }}">{{ $opcion->nombre }}</option>
@@ -73,8 +75,9 @@
                 </select>
             </div>
 
+            {{-- En mobile se ve como lista: sin títulos y solo con la columna "Nombre" (ver docs/mobile.md). --}}
             <table class="w-full text-left text-sm">
-                <thead class="text-muted">
+                <thead class="text-muted max-md:hidden">
                     <tr>
                         <x-tabla.columna columna="nombre" :$orden :$ascendente>Nombre</x-tabla.columna>
                         <x-tabla.columna columna="disciplinas" :$orden :$ascendente>Disciplinas</x-tabla.columna>
@@ -94,9 +97,17 @@
                                 @endif
                                 {{-- El correo va debajo del nombre, más chico. --}}
                                 <p class="text-xs text-muted">{{ $usuario->email }}</p>
+                                {{-- Solo mobile: sus disciplinas van acá abajo, porque la columna de al lado no se ve. --}}
+                                @if ($usuario->disciplinas->isNotEmpty())
+                                    <div class="mt-1.5 flex flex-wrap gap-1.5 md:hidden">
+                                        @foreach ($usuario->disciplinas as $item)
+                                            <x-disciplina.etiqueta :disciplina="$item" />
+                                        @endforeach
+                                    </div>
+                                @endif
                             </td>
                             {{-- Disciplinas: una etiqueta por cada una, con su color, o una raya si no tiene ninguna. --}}
-                            <td class="px-4 py-3">
+                            <td class="px-4 py-3 max-md:hidden">
                                 <div class="flex flex-wrap gap-1.5">
                                     @forelse ($usuario->disciplinas as $item)
                                         <x-disciplina.etiqueta :disciplina="$item" />
@@ -106,7 +117,7 @@
                                 </div>
                             </td>
                             {{-- Cuántos pacientes atiende. --}}
-                            <td class="px-4 py-3 text-right text-muted">{{ $usuario->pacientes_count }}</td>
+                            <td class="px-4 py-3 text-right text-muted max-md:hidden">{{ $usuario->pacientes_count }}</td>
                         </tr>
                     @empty
                         <tr>

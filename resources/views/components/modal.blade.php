@@ -18,7 +18,7 @@
 <div class="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-ink/40 p-4"
     wire:click.self="{{ $cerrar }}"
     x-data x-on:keydown.escape.window="$wire.{{ $cerrar }}()">
-    <div {{ $attributes->class('grid w-full max-w-2xl gap-4 rounded-[20px] bg-white p-6 shadow-[0_10px_40px] shadow-ink/30') }} role="dialog" aria-modal="true">
+    <div {{ $attributes->class('grid w-full max-w-2xl gap-4 rounded-[20px] bg-white p-6 shadow-[0_10px_40px] shadow-ink/30 max-md:p-4') }} role="dialog" aria-modal="true">
         <div class="flex items-center justify-between gap-4">
             <h2 class="text-lg font-semibold">{{ $titulo }}</h2>
             <button type="button" wire:click="{{ $cerrar }}" title="Cerrar"

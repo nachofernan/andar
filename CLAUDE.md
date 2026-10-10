@@ -59,6 +59,7 @@ Hecho:
 - El historial es también la **bitácora**: todo cambio en los datos de un paciente ya cargado pasa por `Paciente::actualizar()`, que deja sola una entrada de tipo `actualizacion` con lo anterior y lo nuevo (cifrada). Cualquier pantalla nueva que modifique pacientes tiene que usar ese método.
 - Archivos adjuntos a los mensajes (PDF, Word, Excel, imágenes; 5 por mensaje, 10 MB), cifrados y con descarga solo para el equipo.
 - Avisos de mensajes sin leer dentro de la app: un puntito rojo en el menú y, en "Mis pacientes" del inicio, la cantidad por paciente. Se marcan leídos al abrir la ficha.
+- Versión mobile (ver `docs/mobile.md`): hecha encima de desktop, solo agregando clases `max-md:` y bloques `md:hidden` en las vistas. **Las clases sin esos prefijos son desktop y no se tocan al ajustar mobile.** Menú ☰, tablas como lista, y en la ficha el chat adelante con los datos y los filtros plegados.
 - Zona horaria de la app: Argentina (`config/app.php`).
 - Cifrado de datos sensibles: `dni` y `diagnostico` del paciente, el texto de los mensajes y los archivos adjuntos se guardan cifrados con `APP_KEY` (ver `docs/cifrado.md`). **Si se pierde `APP_KEY` no se recuperan.**
 - Provisorio: el login viene precargado con el usuario de ejemplo (`app/Livewire/Login.php`); sacarlo antes de usar datos reales.
@@ -67,7 +68,7 @@ Datos de ejemplo (`php artisan migrate:fresh --seed`): 6 disciplinas con los col
 
 ## Pendiente (a definir con el dueño, no construir hasta que se pida)
 
-Diseño y usabilidad: ya se rediseñaron para desktop todas las pantallas (index, formularios, Mi perfil y la ficha del paciente). Sigue mobile. Sacar el login precargado, antes de usar datos reales.
+Diseño y usabilidad: ya se rediseñaron para desktop todas las pantallas (index, formularios, Mi perfil y la ficha del paciente) y hay una primera versión mobile, a revisar y ajustar con el dueño. Sacar el login precargado, antes de usar datos reales.
 
 ## Otros centros (decisión tomada)
 

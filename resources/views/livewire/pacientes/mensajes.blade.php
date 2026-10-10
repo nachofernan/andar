@@ -1,9 +1,12 @@
 {{--
     Vista de App\Livewire\Pacientes\Mensajes: el historial del equipo con forma de chat, dentro de la ficha.
     De arriba hacia abajo: los filtros, los mensajes (con scroll propio) y el cuadro para escribir.
+
+    En mobile (clases max-md: y md:hidden, ver docs/mobile.md) los filtros quedan ocultos detrás de "Filtrar historial".
+    Si están a la vista o no lo guarda Alpine en "filtros" (x-data, acá abajo); en desktop esa variable no cambia nada.
 --}}
 {{-- flex-col: los tres bloques van apilados y el del medio (los mensajes) se estira para ocupar el alto que sobre. --}}
-<div class="flex flex-col rounded-[20px] bg-white shadow-[0_10px_40px] shadow-brand/15">
+<div class="flex flex-col rounded-[20px] bg-white shadow-[0_10px_40px] shadow-brand/15" x-data="{ filtros: false }">
     @if (! $esDelEquipo)
         <div class="grid gap-2 p-6">
             <h2 class="font-semibold">Historial del equipo</h2>
@@ -11,19 +14,24 @@
         </div>
     @else
         {{-- Arriba, los filtros: por fechas (desde / hasta) y por tipo. wire:model.live vuelve a armar la lista apenas cambian. --}}
-        <div class="flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-line px-6 py-4">
+        <div class="flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-line px-6 py-4 max-md:px-4 max-md:py-3">
+            {{-- Solo mobile: el link que muestra u oculta los tres filtros de abajo. --}}
+            <button type="button" @click="filtros = ! filtros" class="mr-auto cursor-pointer text-sm font-semibold text-brand md:hidden"
+                x-text="filtros ? 'Ocultar filtros ▲' : 'Filtrar historial ▼'">Filtrar historial ▼</button>
+
             {{-- Fechas: se puede cargar una sola (solo "desde" o solo "hasta") o las dos. --}}
-            <label class="flex items-center gap-2 text-xs text-muted">Desde
+            {{-- En mobile los tres filtros arrancan ocultos (max-md:hidden) y Alpine les saca esa clase cuando "filtros" es true. --}}
+            <label class="flex items-center gap-2 text-xs text-muted max-md:hidden max-md:w-full" :class="{ 'max-md:hidden': ! filtros }">Desde
                 <input type="date" wire:model.live="desde" max="{{ $hasta }}"
-                    class="rounded-xl border-[1.5px] border-line px-3.5 py-2 text-sm text-ink outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15">
+                    class="rounded-xl border-[1.5px] border-line px-3.5 py-2 text-sm text-ink outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15 max-md:flex-1 max-md:text-base">
             </label>
-            <label class="flex items-center gap-2 text-xs text-muted">hasta
+            <label class="flex items-center gap-2 text-xs text-muted max-md:hidden max-md:w-full" :class="{ 'max-md:hidden': ! filtros }">hasta
                 <input type="date" wire:model.live="hasta" min="{{ $desde }}"
-                    class="rounded-xl border-[1.5px] border-line px-3.5 py-2 text-sm text-ink outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15">
+                    class="rounded-xl border-[1.5px] border-line px-3.5 py-2 text-sm text-ink outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15 max-md:flex-1 max-md:text-base">
             </label>
 
-            <select wire:model.live="filtro" aria-label="Mostrar"
-                class="rounded-xl border-[1.5px] border-line bg-white px-3.5 py-2 text-sm outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15">
+            <select wire:model.live="filtro" aria-label="Mostrar" :class="{ 'max-md:hidden': ! filtros }"
+                class="rounded-xl border-[1.5px] border-line bg-white px-3.5 py-2 text-sm outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15 max-md:hidden max-md:w-full max-md:text-base">
                 <option value="">Todos</option>
                 @foreach ($tipos as $clave => $nombre)
                     <option value="{{ $clave }}">{{ $nombre }}</option>
@@ -47,8 +55,10 @@
             Alpine (x-data) lo deja parado en lo último al abrir la ficha y cada vez que se envía un mensaje,
             se anota un cambio o se tocan los filtros (los tres eventos que dispara Livewire). El pequeño retardo es para esperar
             a que el mensaje nuevo ya esté dibujado.
+            En mobile (max-md:) la cuenta es otra, porque la cabecera es más baja y los filtros están plegados: el alto
+            de la pantalla (100dvh, que descuenta la barra del navegador del celular) menos unos 30rem.
         --}}
-        <div class="grid min-h-[max(20rem,calc(100vh-31rem))] flex-1 basis-0 content-start gap-4 overflow-y-auto px-6 py-4"
+        <div class="grid min-h-[max(20rem,calc(100vh-31rem))] flex-1 basis-0 content-start gap-4 overflow-y-auto px-6 py-4 max-md:min-h-[max(18rem,calc(100dvh-30rem))] max-md:gap-3 max-md:px-3"
             x-data="{ irAlFinal() { setTimeout(() => $el.scrollTop = $el.scrollHeight, 50) } }"
             x-init="irAlFinal()"
             x-on:mensaje-enviado.window="irAlFinal()"
@@ -108,10 +118,11 @@
                         </div>
                     @else
                         {{-- Mensaje de una persona. Los míos van a la derecha (flex-row-reverse da vuelta el orden) y en violeta clarito. --}}
-                        <div wire:key="mensaje-{{ $mensaje->id }}" class="flex items-start gap-3 {{ $esMio ? 'flex-row-reverse' : '' }}">
-                            <x-avatar :usuario="$mensaje->autor" />
+                        <div wire:key="mensaje-{{ $mensaje->id }}" class="flex items-start gap-3 max-md:gap-2 {{ $esMio ? 'flex-row-reverse' : '' }}">
+                            {{-- Mobile: el círculo más chico y el globo más ancho, para aprovechar la pantalla. --}}
+                            <x-avatar :usuario="$mensaje->autor" class="max-md:size-7 max-md:text-[11px]" />
 
-                            <div class="grid max-w-[75%] gap-1 {{ $esMio ? 'justify-items-end' : 'justify-items-start' }}">
+                            <div class="grid max-w-[75%] max-md:max-w-[85%] gap-1 {{ $esMio ? 'justify-items-end' : 'justify-items-start' }}">
                                 {{-- Quién, sus disciplinas y la hora. --}}
                                 <div class="flex flex-wrap items-center gap-1.5 text-xs {{ $esMio ? 'flex-row-reverse' : '' }}">
                                     <span class="text-sm font-semibold">{{ $mensaje->autor->name }}</span>
@@ -154,14 +165,15 @@
         </div>
 
         {{-- Escribir un mensaje nuevo, al pie. --}}
-        <form wire:submit="enviar" class="grid gap-2 border-t border-line px-6 py-4">
+        <form wire:submit="enviar" class="grid gap-2 border-t border-line px-6 py-4 max-md:p-3">
+            {{-- Mobile: más bajo (max-md:h-20, unos dos renglones) y con letra de 16 px, para que el iPhone no haga zoom al tocarlo. --}}
             <textarea wire:model="cuerpo" rows="3" placeholder="Escribir un mensaje al equipo…"
-                class="rounded-xl border-[1.5px] border-line px-3.5 py-[11px] text-sm outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15"></textarea>
+                class="rounded-xl border-[1.5px] border-line px-3.5 py-[11px] text-sm outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15 max-md:h-20 max-md:text-base"></textarea>
             @error('cuerpo') <span class="text-[13px] text-red-600">{{ $message }}</span> @enderror
 
             <div class="flex flex-wrap items-center gap-2">
                 <select wire:model="tipo" aria-label="Tipo de mensaje"
-                    class="rounded-xl border-[1.5px] border-line bg-white px-3.5 py-2 text-sm outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15">
+                    class="rounded-xl border-[1.5px] border-line bg-white px-3.5 py-2 text-sm outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15 max-md:px-2.5 max-md:text-base">
                     @foreach ($tiposParaEscribir as $clave => $nombre)
                         <option value="{{ $clave }}">{{ $nombre }}</option>
                     @endforeach

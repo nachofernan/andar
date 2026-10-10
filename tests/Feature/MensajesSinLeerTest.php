@@ -372,8 +372,9 @@ class MensajesSinLeerTest extends TestCase
             ->assertSeeInOrder(['href="'.route('inicio').'"', 'Mis pacientes', self::PUNTITO.'></span>'], false)
             ->getContent();
 
-        // Uno solo, aunque los mensajes sean de dos pacientes.
-        $this->assertSame(1, substr_count($html, self::PUNTITO));
+        // Uno por menú, aunque los mensajes sean de dos pacientes: el del link "Mis pacientes" (desktop)
+        // y el del botón ☰ (mobile). En cada tamaño de pantalla se ve uno solo de los dos.
+        $this->assertSame(2, substr_count($html, self::PUNTITO));
     }
 
     public function test_el_menu_no_muestra_el_puntito_cuando_no_hay_mensajes_sin_leer(): void

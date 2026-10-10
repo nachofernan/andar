@@ -454,6 +454,34 @@ class RolesTest extends TestCase
             ->assertSee('Salir');
     }
 
+    public function test_el_menu_mobile_muestra_administracion_solo_a_direccion(): void
+    {
+        // El menú mobile es el panel que abre el botón ☰ (aria-label="Menú"): lo que venga después de ese botón es suyo.
+        $boton = 'aria-label="Menú"';
+
+        // Un profesional tiene el botón ☰, pero su panel no trae las pantallas de administración.
+        $this->actingAs(User::factory()->create())
+            ->get('/')
+            ->assertOk()
+            ->assertSeeInOrder([$boton, 'Mis pacientes', 'Mi perfil', 'Salir'], false)
+            ->assertDontSee('Profesionales y disciplinas');
+
+        $this->entrarComoDireccion();
+
+        $html = $this->get('/')
+            ->assertOk()
+            ->assertSeeInOrder([
+                $boton,
+                'Administración',
+                'href="'.route('pacientes').'"', 'Pacientes',
+                'href="'.route('usuarios').'"', 'Profesionales y disciplinas',
+            ], false)
+            ->getContent();
+
+        // Dos veces: una en el desplegable de desktop y otra en el panel mobile.
+        $this->assertSame(2, substr_count($html, 'Profesionales y disciplinas'));
+    }
+
     public function test_el_desplegable_de_administracion_esta_en_todas_las_pantallas_para_direccion(): void
     {
         $paciente = $this->crearPaciente();

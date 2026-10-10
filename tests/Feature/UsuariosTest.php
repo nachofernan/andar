@@ -758,8 +758,10 @@ class UsuariosTest extends TestCase
             ->assertSeeHtml('style="color: #ff0000; background-color: #ff00001a">Psicología</span>')
             ->html();
 
-        // Una sola etiqueta de cada una: la de Zulema. (Ana no tiene, y el panel de disciplinas usa un puntito, no etiquetas.)
-        $this->assertSame(2, substr_count($html, 'style="color:'));
+        // Las dos de Zulema, escritas dos veces: en la columna "Disciplinas" (desktop) y debajo del correo (mobile);
+        // en cada tamaño de pantalla se ve una sola de las dos tandas.
+        // (Ana no tiene, y el panel de disciplinas usa un puntito, no etiquetas.)
+        $this->assertSame(4, substr_count($html, 'style="color:'));
     }
 
     public function test_quien_es_de_direccion_lleva_la_etiqueta_admin_y_ya_no_hay_columna_de_rol(): void
@@ -824,8 +826,8 @@ class UsuariosTest extends TestCase
         $usuario = User::factory()->create(['name' => 'Ana Gómez']);
         $this->asignarPacientes($usuario, 3);
 
-        // El número de cada fila va en una celda con "text-right".
-        $this->lista()->assertSeeHtml('<td class="px-4 py-3 text-right text-muted">3</td>');
+        // El número de cada fila va en una celda con "text-right" (y "max-md:hidden": en mobile esa columna no se ve).
+        $this->lista()->assertSeeHtml('<td class="px-4 py-3 text-right text-muted max-md:hidden">3</td>');
     }
 
     // ---------------------------------------------------------------- Listado: buscador

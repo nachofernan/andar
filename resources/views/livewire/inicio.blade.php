@@ -1,7 +1,7 @@
 {{-- Vista de App\Livewire\Inicio: saludo con el aviso de mensajes sin leer y la tabla "Mis pacientes". --}}
 <div class="grid gap-4">
     {{-- Saludo, dentro de un globo (como de chat: la esquina de abajo a la izquierda va menos redondeada). --}}
-    <div class="justify-self-start rounded-[20px] rounded-bl-md bg-white px-12 py-6 shadow-[0_10px_40px] shadow-brand/15">
+    <div class="justify-self-start rounded-[20px] rounded-bl-md bg-white px-12 py-6 shadow-[0_10px_40px] shadow-brand/15 max-md:px-5 max-md:py-4">
         <h1 class="text-[22px] font-bold">Hola, {{ auth()->user()->name }} 👋</h1>
         {{-- Cuántos mensajes sin leer tiene y de cuántos pacientes (ver User::mensajesSinLeer). --}}
         @if ($sinLeer->isNotEmpty())
@@ -29,11 +29,12 @@
         {{-- Buscador y filtros, en su propio renglón. wire:model.live vuelve a armar la tabla apenas cambian. --}}
         <div class="flex flex-wrap items-center gap-3 px-4 pt-2">
             {{-- debounce: espera a que se deje de escribir un instante, para no consultar en cada tecla. --}}
+            {{-- Mobile (max-md:): a todo el ancho y con letra de 16 px, para que el iPhone no haga zoom al tocarlo. --}}
             <input type="search" wire:model.live.debounce.300ms="buscar" placeholder="Buscar paciente…"
-                class="mr-auto w-72 rounded-xl border-[1.5px] border-line px-3.5 py-2 text-sm outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15">
+                class="mr-auto w-72 rounded-xl border-[1.5px] border-line px-3.5 py-2 text-sm outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15 max-md:w-full max-md:text-base">
 
             <select wire:model.live="estado"
-                class="rounded-xl border-[1.5px] border-line bg-white px-3.5 py-2 text-sm outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15">
+                class="rounded-xl border-[1.5px] border-line bg-white px-3.5 py-2 text-sm outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15 max-md:text-base">
                 <option value="activos">Activos</option>
                 <option value="inactivos">Inactivos</option>
                 <option value="todos">Todos</option>
@@ -45,8 +46,12 @@
             </label>
         </div>
 
+        {{--
+            En mobile la tabla se ve como una lista: quedan ocultos los títulos y todas las columnas menos "Paciente"
+            (max-md:hidden), y lo que decían va en un renglón chico debajo del nombre (md:hidden). Ver docs/mobile.md.
+        --}}
         <table class="w-full text-left text-sm">
-            <thead class="text-muted">
+            <thead class="text-muted max-md:hidden">
                 <tr>
                     <x-tabla.columna columna="paciente" :$orden :$ascendente>Paciente</x-tabla.columna>
                     <x-tabla.columna columna="edad" :$orden :$ascendente>Edad</x-tabla.columna>
@@ -64,17 +69,27 @@
                             @if ($sinLeer->has($paciente->id))
                                 <span class="ml-1 rounded-full bg-brand-soft px-2 py-0.5 text-xs text-brand">{{ $sinLeer[$paciente->id] }} {{ $sinLeer[$paciente->id] == 1 ? 'mensaje' : 'mensajes' }} sin leer</span>
                             @endif
+                            {{-- Solo mobile: "Inactivo" al lado del nombre y, debajo, la edad y la última actividad (las columnas que no se ven). --}}
+                            @if (! $paciente->activo)
+                                <span class="ml-1 rounded-full bg-line px-2 py-0.5 text-xs font-semibold text-muted md:hidden">Inactivo</span>
+                            @endif
+                            <p class="mt-0.5 text-xs text-muted md:hidden">
+                                {{ $paciente->edad }} años
+                                @if ($paciente->ultimoMensaje)
+                                    · {{ $paciente->ultimoMensaje->created_at->format('d/m/Y') }} · {{ $paciente->ultimoMensaje->autor->name }}
+                                @endif
+                            </p>
                         </td>
-                        <td class="px-4 py-3 text-muted">{{ $paciente->edad }} años</td>
+                        <td class="px-4 py-3 text-muted max-md:hidden">{{ $paciente->edad }} años</td>
                         {{-- Fecha del último mensaje y quién lo escribió (nunca el texto). Raya si todavía no hay ninguno. --}}
-                        <td class="px-4 py-3 text-muted">
+                        <td class="px-4 py-3 text-muted max-md:hidden">
                             @if ($paciente->ultimoMensaje)
                                 {{ $paciente->ultimoMensaje->created_at->format('d/m/Y') }} · {{ $paciente->ultimoMensaje->autor->name }}
                             @else
                                 —
                             @endif
                         </td>
-                        <td class="px-4 py-3">
+                        <td class="px-4 py-3 max-md:hidden">
                             @if ($paciente->activo)
                                 <span class="rounded-full bg-accent/10 px-2.5 py-1 text-xs font-semibold text-accent">Activo</span>
                             @else

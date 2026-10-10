@@ -8,7 +8,7 @@
 --}}
 @props(['titulo', 'ayuda' => null])
 
-<section {{ $attributes->class('grid gap-4 rounded-[20px] bg-white p-6 shadow-[0_10px_40px] shadow-brand/15') }}>
+<section {{ $attributes->class('grid gap-4 rounded-[20px] bg-white p-6 shadow-[0_10px_40px] shadow-brand/15 max-md:p-4') }}>
     <div>
         <h2 class="font-semibold">{{ $titulo }}</h2>
         @if ($ayuda)

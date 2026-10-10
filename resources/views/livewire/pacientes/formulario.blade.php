@@ -4,7 +4,7 @@
 --}}
 @php
     // Clases de los controles (input, textarea), para no repetirlas en cada campo.
-    $control = 'rounded-xl border-[1.5px] border-line px-3.5 py-[11px] font-normal outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15';
+    $control = 'rounded-xl border-[1.5px] border-line px-3.5 py-[11px] font-normal outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15 max-md:text-base';
 @endphp
 
 <form wire:submit="guardar" class="grid gap-4">
@@ -12,11 +12,12 @@
         <a href="{{ route('pacientes') }}" class="text-sm font-medium text-muted hover:text-brand">← Volver a pacientes</a>
     </div>
 
-    <div class="grid grid-cols-[1fr_22rem] items-start gap-4">
+    {{-- Mobile (max-md:): una sola columna, los campos de a uno por renglón y el panel al final, sin quedar fijo (ver docs/mobile.md). --}}
+    <div class="grid grid-cols-[1fr_22rem] items-start gap-4 max-md:grid-cols-1">
         {{-- Columna izquierda: los datos del paciente. --}}
         <div class="grid gap-4">
             <x-formulario.seccion titulo="Datos personales">
-                <div class="grid grid-cols-2 gap-3">
+                <div class="grid grid-cols-2 gap-3 max-md:grid-cols-1">
                     <x-formulario.campo nombre="Nombre" error="nombre">
                         <input type="text" wire:model="nombre" class="{{ $control }}">
                     </x-formulario.campo>
@@ -36,8 +37,8 @@
             </x-formulario.seccion>
 
             <x-formulario.seccion titulo="Escolaridad y cobertura">
-                <div class="grid grid-cols-2 gap-3">
-                    <x-formulario.campo nombre="Obra social" opcional error="obra_social" class="col-span-2">
+                <div class="grid grid-cols-2 gap-3 max-md:grid-cols-1">
+                    <x-formulario.campo nombre="Obra social" opcional error="obra_social" class="col-span-2 max-md:col-span-1">
                         <input type="text" wire:model="obra_social" class="{{ $control }}">
                     </x-formulario.campo>
 
@@ -63,7 +64,7 @@
         </div>
 
         {{-- Columna derecha: queda fija al bajar con el scroll (sticky), así los botones están siempre a la vista. --}}
-        <aside class="sticky top-4 grid gap-4">
+        <aside class="sticky top-4 grid gap-4 max-md:static">
             {{-- Equipo: un renglón por usuario. Los tildados quedan como profesionales del paciente. --}}
             <x-formulario.seccion titulo="Equipo" ayuda="Profesionales que lo atienden.">
                 {{-- Cuántos hay tildados. Lo actualiza Alpine al instante, leyendo la propiedad "equipo" del componente. --}}

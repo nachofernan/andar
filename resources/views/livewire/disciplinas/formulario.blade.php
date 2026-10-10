@@ -4,7 +4,7 @@
 --}}
 @php
     // Clases de los controles (input), para no repetirlas en cada campo.
-    $control = 'rounded-xl border-[1.5px] border-line px-3.5 py-[11px] font-normal outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15';
+    $control = 'rounded-xl border-[1.5px] border-line px-3.5 py-[11px] font-normal outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15 max-md:text-base';
 @endphp
 
 <form wire:submit="guardar" class="grid gap-4">
@@ -12,7 +12,8 @@
         <a href="{{ route('usuarios') }}" class="text-sm font-medium text-muted hover:text-brand">← Volver a profesionales y disciplinas</a>
     </div>
 
-    <div class="grid grid-cols-[1fr_22rem] items-start gap-4">
+    {{-- Mobile (max-md:): una sola columna, los campos de a uno por renglón y el panel al final, sin quedar fijo (ver docs/mobile.md). --}}
+    <div class="grid grid-cols-[1fr_22rem] items-start gap-4 max-md:grid-cols-1">
         {{-- Columna izquierda: nombre y color. --}}
         <x-formulario.seccion titulo="Disciplina">
             <x-formulario.campo nombre="Nombre" error="nombre" class="max-w-md">
@@ -41,7 +42,7 @@
         </x-formulario.seccion>
 
         {{-- Columna derecha: queda fija al bajar con el scroll (sticky), así los botones están siempre a la vista. --}}
-        <aside class="sticky top-4 grid gap-4">
+        <aside class="sticky top-4 grid gap-4 max-md:static">
             {{-- Profesionales: un renglón por usuario. Los tildados quedan con esta disciplina. --}}
             <x-formulario.seccion titulo="Profesionales" ayuda="Quiénes tienen esta disciplina.">
                 {{-- Cuántos hay tildados. Lo actualiza Alpine al instante, leyendo la propiedad "profesionales" del componente. --}}
