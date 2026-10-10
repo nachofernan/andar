@@ -985,6 +985,28 @@ class UsuariosTest extends TestCase
             ->assertSeeHtmlInOrder(['Bruno Sosa', 'Álvaro Paz', 'Ana Gómez', 'Marta Díaz', 'Zulema Ruiz']);
     }
 
+    public function test_la_lista_se_puede_ordenar_por_disciplinas(): void
+    {
+        $psicologia = Disciplina::create(['nombre' => 'Psicología']);
+        $fonoaudiologia = Disciplina::create(['nombre' => 'Fonoaudiología']);
+        $lista = $this->listaConTresPersonas();
+        // Ana tiene Psicología; Zulema tiene las dos, y manda la primera por nombre (Fonoaudiología); Marta ninguna.
+        User::where('name', 'Ana Gómez')->firstOrFail()->disciplinas()->attach($psicologia->id);
+        User::where('name', 'Zulema Ruiz')->firstOrFail()->disciplinas()->attach([$psicologia->id, $fonoaudiologia->id]);
+
+        $lista->call('ordenarPor', 'disciplinas')
+            ->assertSet('orden', 'disciplinas')
+            ->assertSet('ascendente', true)
+            // Zulema (Fonoaudiología, …), Ana (Psicología) y al final Marta, que no tiene ninguna.
+            // No es el orden de los nombres ni el de la cantidad de pacientes.
+            ->assertSeeHtmlInOrder(['Zulema Ruiz', 'Ana Gómez', 'Marta Díaz'])
+            // El segundo clic lo da vuelta: quien no tiene disciplina pasa adelante.
+            ->call('ordenarPor', 'disciplinas')
+            ->assertSet('orden', 'disciplinas')
+            ->assertSet('ascendente', false)
+            ->assertSeeHtmlInOrder(['Marta Díaz', 'Ana Gómez', 'Zulema Ruiz']);
+    }
+
     public function test_cambiar_de_columna_arranca_de_nuevo_en_ascendente(): void
     {
         $this->listaConTresPersonas()

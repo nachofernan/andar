@@ -6,7 +6,7 @@ Las tres tablas principales se pueden **buscar, filtrar y ordenar** sin recargar
 |---|---|---|---|
 | Inicio › Mis pacientes | Nombre y apellido | Estado (Activos / Inactivos / Todos) y "Solo con mensajes sin leer" | Paciente, Edad, Última actividad |
 | Administración › Pacientes | Nombre, apellido y DNI (con o sin puntos) | Profesional y Estado (abre en Activos) | Paciente, Ingreso, Estado |
-| Administración › Profesionales | Nombre y email | Disciplina | Nombre, Pacientes (cuántos atiende) |
+| Administración › Profesionales | Nombre y email | Disciplina | Nombre, Disciplinas (alfabético; con varias manda la primera, y quien no tiene ninguna va al final), Pacientes (cuántos atiende) |
 
 ## Cómo se usa
 

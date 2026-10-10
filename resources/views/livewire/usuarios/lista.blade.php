@@ -77,7 +77,7 @@
                 <thead class="text-muted">
                     <tr>
                         <x-tabla.columna columna="nombre" :$orden :$ascendente>Nombre</x-tabla.columna>
-                        <th class="px-4 py-3 font-medium">Disciplinas</th>
+                        <x-tabla.columna columna="disciplinas" :$orden :$ascendente>Disciplinas</x-tabla.columna>
                         <x-tabla.columna columna="pacientes" :$orden :$ascendente derecha>Pacientes</x-tabla.columna>
                     </tr>
                 </thead>

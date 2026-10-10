@@ -23,9 +23,27 @@ class SeedersTest extends TestCase
         $this->seed(); // Corre DatabaseSeeder, que llama a todos los seeders en orden.
 
         $this->assertSame(6, Disciplina::count());
-        $this->assertSame(8, User::count());
-        $this->assertSame(15, Paciente::count());
-        $this->assertSame(10, Mensaje::count());
+        $this->assertSame(21, User::count());
+        $this->assertSame(60, Paciente::count());
+        // Los mensajes se arman solos en su mayoría (ver MensajeSeeder::generarMensajes), por eso no se
+        // comprueba un número exacto sino que haya volumen.
+        $this->assertGreaterThanOrEqual(100, Mensaje::count());
+    }
+
+    public function test_cada_disciplina_de_ejemplo_tiene_un_color_distinto(): void
+    {
+        $this->seed();
+
+        // Seis disciplinas, seis colores: si dos compartieran color sus etiquetas no se distinguirían.
+        $this->assertCount(6, Disciplina::pluck('color')->unique());
+    }
+
+    public function test_los_pacientes_de_ejemplo_no_repiten_dni(): void
+    {
+        $this->seed();
+
+        // Los mensajes de ejemplo buscan al paciente por DNI: uno repetido los mandaría al paciente equivocado.
+        $this->assertCount(60, Paciente::all()->pluck('dni')->unique());
     }
 
     public function test_cada_mensaje_de_ejemplo_lo_escribe_alguien_del_equipo_de_su_paciente(): void
@@ -53,11 +71,11 @@ class SeedersTest extends TestCase
 
         // Tomás: lo vio hasta el 5/10 al mediodía, le queda solo el mensaje posterior que escribió otra persona.
         // Benjamín: nunca lo abrió, le quedan los dos que no son suyos.
-        // En sus otros pacientes no hay mensajes de otros, así que no figuran.
-        $this->assertSame(
-            [$tomas->id => 1, $benjamin->id => 2],
-            $catalina->mensajesSinLeer()->all(),
-        );
+        // Tiene sin leer también en otros pacientes (mensajes generados), pero esos no se comprueban acá.
+        $sinLeer = $catalina->mensajesSinLeer();
+
+        $this->assertSame(1, $sinLeer[$tomas->id]);
+        $this->assertSame(2, $sinLeer[$benjamin->id]);
     }
 
     public function test_catalina_existe_con_disciplina_psicologia_y_contrasena_password(): void
@@ -79,7 +97,7 @@ class SeedersTest extends TestCase
 
         // Sin nadie de Dirección no se podrían cargar usuarios ni pacientes desde la app.
         $this->assertSame(['catalina@andar.test'], User::role('direccion')->pluck('email')->all());
-        $this->assertSame(7, User::role('profesional')->count());
+        $this->assertSame(20, User::role('profesional')->count());
 
         // Cada usuario tiene exactamente un rol: nadie quedó sin rol ni con los dos.
         foreach (User::with('roles')->get() as $usuario) {
@@ -113,10 +131,10 @@ class SeedersTest extends TestCase
         $this->seed();
 
         // Con equipo: confirma que se llenó la tabla intermedia paciente_user.
-        $this->assertSame(14, Paciente::has('profesionales')->count());
-        // Lautaro Sánchez es el único que queda sin equipo asignado.
-        $this->assertSame(1, Paciente::doesntHave('profesionales')->count());
-        $this->assertSame(2, Paciente::where('activo', false)->count());
+        $this->assertSame(57, Paciente::has('profesionales')->count());
+        // Sin equipo asignado quedan tres: Lautaro Sánchez, Mora Leiva y Zoe Barrios.
+        $this->assertSame(3, Paciente::doesntHave('profesionales')->count());
+        $this->assertSame(6, Paciente::where('activo', false)->count());
     }
 
     public function test_el_dni_de_los_pacientes_de_ejemplo_se_lee_sin_cifrar(): void

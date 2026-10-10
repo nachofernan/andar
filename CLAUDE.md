@@ -63,7 +63,7 @@ Hecho:
 - Cifrado de datos sensibles: `dni` y `diagnostico` del paciente, el texto de los mensajes y los archivos adjuntos se guardan cifrados con `APP_KEY` (ver `docs/cifrado.md`). **Si se pierde `APP_KEY` no se recuperan.**
 - Provisorio: el login viene precargado con el usuario de ejemplo (`app/Livewire/Login.php`); sacarlo antes de usar datos reales.
 
-Datos de ejemplo (`php artisan migrate:fresh --seed`): 6 disciplinas, 8 usuarios (todos con `password`; `catalina@andar.test` es de Dirección y el resto profesionales, p. ej. `paula@andar.test`), 15 pacientes inventados con su equipo y 10 mensajes. Están escritos a mano en `database/seeders/` (ver `docs/modelos.md`).
+Datos de ejemplo (`php artisan migrate:fresh --seed`): 6 disciplinas con los colores del logo, 21 usuarios (todos con `password`; `catalina@andar.test` es de Dirección y los otros 20 profesionales, p. ej. `paula@andar.test`), 60 pacientes inventados con su equipo y 164 mensajes. Están escritos a mano en `database/seeders/`, salvo la mayoría de los mensajes, que se arman rotando un banco de frases, sin azar (ver `docs/modelos.md`).
 
 ## Pendiente (a definir con el dueño, no construir hasta que se pida)
 

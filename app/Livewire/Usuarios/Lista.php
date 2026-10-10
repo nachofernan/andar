@@ -31,6 +31,9 @@ class Lista extends Component
     {
         return [
             'nombre' => fn (User $usuario) => $this->normalizar($usuario->name),
+            // Alfabético por sus disciplinas (ya vienen ordenadas por nombre); con varias, manda la primera.
+            // Quien no tiene ninguna lleva "~", que va después de cualquier letra: queda al final.
+            'disciplinas' => fn (User $usuario) => $this->normalizar($usuario->disciplinas->pluck('nombre')->implode(', ')) ?: '~',
             // Cuántos pacientes atiende (ver withCount en render).
             'pacientes' => fn (User $usuario) => $usuario->pacientes_count,
         ];
