@@ -278,7 +278,7 @@ class MensajesTest extends TestCase
             ->assertDontSee('Una nota de sesión breve.')
             // Un tipo sin mensajes avisa en vez de quedar en blanco.
             ->set('filtro', 'indicacion')
-            ->assertSee('No hay mensajes de este tipo.')
+            ->assertSee('No hay mensajes con esos filtros.')
             // Al volver a "Todos" reaparecen.
             ->set('filtro', '')
             ->assertSee('Un mensaje común.')
@@ -468,15 +468,19 @@ class MensajesTest extends TestCase
             ->test(Mensajes::class, ['paciente' => $paciente])
             ->html();
 
-        // El desplegable ofrece los cuatro tipos que escribe una persona.
-        foreach (['mensaje', 'informe', 'indicacion', 'nota'] as $tipo) {
-            $this->assertStringContainsString('<option value="'.$tipo.'">', $html);
-        }
-        $this->assertStringNotContainsString('<option value="actualizacion">', $html);
+        // Hay dos desplegables con tipos: el filtro (arriba) y el de escribir (abajo). Se separa el HTML en esas dos partes.
+        [$filtros, $escribir] = explode('wire:model="tipo"', $html);
+        $this->assertStringContainsString('wire:model.live="filtro"', $filtros);
 
-        // En los filtros sí está, junto a "Todos" y los demás: sirve para ver solo la bitácora.
+        // El de escribir ofrece los cuatro tipos que escribe una persona, y no el automático.
+        foreach (['mensaje', 'informe', 'indicacion', 'nota'] as $tipo) {
+            $this->assertStringContainsString('<option value="'.$tipo.'">', $escribir);
+        }
+        $this->assertStringNotContainsString('<option value="actualizacion">', $escribir);
+
+        // En el filtro sí está, junto a "Todos" y los demás: sirve para ver solo la bitácora.
         foreach (['', 'mensaje', 'informe', 'indicacion', 'nota', 'actualizacion'] as $tipo) {
-            $this->assertStringContainsString('wire:key="filtro-'.$tipo.'"', $html);
+            $this->assertStringContainsString('<option value="'.$tipo.'">', $filtros);
         }
     }
 

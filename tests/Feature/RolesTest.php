@@ -339,16 +339,17 @@ class RolesTest extends TestCase
         $ficha->call('$refresh')->assertForbidden();
     }
 
-    public function test_direccion_ve_la_ficha_con_el_boton_editar_aunque_no_sea_del_equipo(): void
+    public function test_direccion_ve_la_ficha_aunque_no_sea_del_equipo(): void
     {
         $paciente = $this->crearPaciente();
 
         $this->entrarComoDireccion();
 
+        // Ve la ficha, pero el link para editar ya no está ahí: se edita desde Administración › Pacientes.
         $this->get("/pacientes/{$paciente->id}")
             ->assertOk()
             ->assertSee('Ana Zapata')
-            ->assertSee(route('pacientes.editar', $paciente));
+            ->assertDontSee(route('pacientes.editar', $paciente));
     }
 
     // ---------------------------------------------------------------- Historial y adjuntos: solo el equipo

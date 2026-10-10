@@ -538,15 +538,20 @@ class BitacoraTest extends TestCase
             ->assertViewHas('esDelEquipo', true)
             ->assertSet('editandoDiagnostico', false)
             ->assertSeeHtml('wire:click="editarDiagnostico"')
-            ->assertDontSeeHtml('wire:model="diagnostico"') // Todavía no hay cuadro de texto.
+            ->assertDontSeeHtml('wire:model="diagnostico"') // Todavía no está la ventana con el cuadro de texto.
             ->call('editarDiagnostico')
             ->assertSet('editandoDiagnostico', true)
             ->assertSet('diagnostico', 'Retraso del lenguaje')
-            // Aparece el cuadro de texto con sus botones, y el botón "Editar" se esconde mientras tanto.
+            // Se abre la ventana (modal) con el cuadro de texto y sus botones. La tarjeta de atrás queda como estaba.
+            ->assertSeeHtml('role="dialog"')
+            ->assertSee('Diagnóstico de '.$paciente->nombre.' '.$paciente->apellido)
             ->assertSeeHtml('wire:model="diagnostico"')
             ->assertSeeHtml('wire:submit="guardarDiagnostico"')
             ->assertSeeHtml('wire:click="cancelarDiagnostico"')
-            ->assertDontSeeHtml('wire:click="editarDiagnostico"');
+            // Cancelar la cierra.
+            ->call('cancelarDiagnostico')
+            ->assertSet('editandoDiagnostico', false)
+            ->assertDontSeeHtml('role="dialog"');
     }
 
     public function test_editar_un_diagnostico_que_no_estaba_cargado_abre_el_cuadro_vacio(): void

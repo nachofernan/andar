@@ -669,26 +669,24 @@ class PacientesTest extends TestCase
         $this->assertStringContainsString('style="color: #00aa00; background-color: #00aa001a">Fonoaudiología</span>', $html);
         $this->assertStringContainsString('style="color: #aa0000; background-color: #aa00001a">Psicología</span>', $html);
         // Son dos etiquetas en total: Marta no tiene disciplinas, así que no lleva ninguna (ni una vacía).
-        $this->assertSame(2, substr_count($html, 'background-color:'));
+        // Se cuentan por el "1a" del fondo clarito, que solo tienen las etiquetas (los círculos de iniciales no).
+        $this->assertSame(2, substr_count($html, '1a">'));
     }
 
-    public function test_el_link_de_arriba_de_la_ficha_vuelve_al_inicio_y_no_al_listado_administrativo(): void
+    public function test_la_ficha_no_tiene_links_de_volver_ni_al_listado_administrativo(): void
     {
         $paciente = $this->crearPaciente();
         $lucia = User::factory()->create();
         $paciente->profesionales()->attach($lucia->id);
 
-        // Antes iba al listado de pacientes, que a un profesional le da 403.
+        // Se vuelve con el menú de arriba. Sobre todo, no hay link al listado de pacientes, que a un profesional le da 403.
         Livewire::actingAs($lucia)
             ->test(Ficha::class, ['paciente' => $paciente])
-            ->assertSeeInOrder(['href="'.route('inicio').'"', '← Mis pacientes'], false)
+            ->assertDontSee('← Mis pacientes')
             ->assertDontSeeHtml('href="'.route('pacientes').'"');
-
-        // Y el destino le abre: es su pantalla de "Mis pacientes".
-        $this->actingAs($lucia)->get(route('inicio'))->assertOk();
     }
 
-    public function test_solo_direccion_ve_en_la_ficha_el_link_para_editar_el_paciente(): void
+    public function test_la_ficha_no_tiene_link_para_editar_el_paciente_ni_para_direccion(): void
     {
         $paciente = $this->crearPaciente();
         $lucia = User::factory()->create();
@@ -699,8 +697,10 @@ class PacientesTest extends TestCase
             ->assertDontSee('Editar paciente')
             ->assertDontSeeHtml(route('pacientes.editar', $paciente));
 
+        // Dirección edita entrando por Administración › Pacientes, no desde la ficha.
         $this->ficha($paciente)
-            ->assertSeeInOrder(['href="'.route('pacientes.editar', $paciente).'"', 'Editar paciente'], false);
+            ->assertDontSee('Editar paciente')
+            ->assertDontSeeHtml(route('pacientes.editar', $paciente));
     }
 
     public function test_la_ficha_avisa_cuando_el_paciente_no_tiene_equipo(): void
