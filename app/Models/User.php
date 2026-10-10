@@ -88,6 +88,7 @@ class User extends Authenticatable
      *
      * Un mensaje está sin leer si es de un paciente de su equipo, lo escribió otra persona
      * y es posterior a la última vez que abrió ese historial (o nunca lo abrió).
+     * Los pacientes inactivos (dados de baja) no cuentan.
      *
      * @return Collection<int, int>
      */
@@ -99,6 +100,9 @@ class User extends Authenticatable
                 $union->on('paciente_user.paciente_id', '=', 'mensajes.paciente_id')
                     ->where('paciente_user.user_id', $this->id);
             })
+            // Une con el paciente para dejar afuera a los inactivos.
+            ->join('pacientes', 'pacientes.id', '=', 'mensajes.paciente_id')
+            ->where('pacientes.activo', true)
             ->where('mensajes.user_id', '!=', $this->id)
             ->where(function ($consulta) {
                 $consulta->whereNull('paciente_user.mensajes_vistos_at')

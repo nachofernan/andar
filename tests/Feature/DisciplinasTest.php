@@ -58,7 +58,8 @@ class DisciplinasTest extends TestCase
         $this->get('/administracion/disciplinas/crear')
             ->assertOk()
             ->assertSeeLivewire(Formulario::class)
-            ->assertSee('Nueva disciplina');
+            // El formulario ya no lleva título: se reconoce por el link de volver al listado.
+            ->assertSeeInOrder(['href="'.route('usuarios').'"', 'Volver a profesionales y disciplinas'], false);
     }
 
     public function test_direccion_ve_la_pantalla_de_editar_disciplina(): void
@@ -69,7 +70,9 @@ class DisciplinasTest extends TestCase
         $this->get("/administracion/disciplinas/{$disciplina->id}/editar")
             ->assertOk()
             ->assertSeeLivewire(Formulario::class)
-            ->assertSee('Editar disciplina');
+            // El formulario ya no lleva título: se reconoce por el link de volver al listado.
+            // (Que abre con los datos de la disciplina ya cargados se prueba más abajo, en "Editar".)
+            ->assertSeeInOrder(['href="'.route('usuarios').'"', 'Volver a profesionales y disciplinas'], false);
     }
 
     public function test_editar_una_disciplina_que_no_existe_da_404(): void

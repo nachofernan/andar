@@ -478,7 +478,7 @@ class InicioTest extends TestCase
             ->set('buscar', 'zapata')
             ->set('soloSinLeer', true)
             ->assertSee('Zapata, Ana')
-            ->assertDontSee('Zapata, Bruno') // Inactivo.
+            ->assertDontSee('Zapata, Bruno') // Inactivo (y por eso su mensaje tampoco cuenta como sin leer).
             ->assertDontSee('Zapata, Carla') // Sin mensajes sin leer.
             ->assertDontSee('Molina, Dana'); // Otro apellido.
     }
@@ -489,7 +489,9 @@ class InicioTest extends TestCase
     {
         $lucia = User::factory()->create();
         $marta = User::factory()->create();
-        $bruno = $this->crearPacienteDe([$lucia, $marta], 'Arnal', 'Bruno', ['activo' => false]);
+        // Bruno está activo: los mensajes de un paciente inactivo no cuentan como sin leer,
+        // así que con "solo sin leer" tildado un inactivo nunca aparecería.
+        $bruno = $this->crearPacienteDe([$lucia, $marta], 'Arnal', 'Bruno');
         $this->crearPacienteDe([$lucia, $marta], 'Zapata', 'Ana');
         $this->crearMensaje($bruno, $marta);
 
@@ -509,7 +511,7 @@ class InicioTest extends TestCase
             ->assertSet('soloSinLeer', true)
             ->assertSet('orden', 'actividad')
             ->assertSet('ascendente', false)
-            // Y muestra lo que corresponde a esos filtros: Bruno está inactivo, sin "todos" no se vería.
+            // Y muestra lo que corresponde a esos filtros: Bruno coincide con la búsqueda y tiene un mensaje sin leer.
             ->assertSee('Arnal, Bruno')
             ->assertDontSee('Zapata, Ana');
     }

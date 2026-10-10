@@ -163,7 +163,10 @@ class PacientesTest extends TestCase
         $this->get('/administracion/pacientes/crear')
             ->assertOk()
             ->assertSeeLivewire(Formulario::class)
-            ->assertSee('Nuevo paciente');
+            // El formulario ya no lleva título: se reconoce por el link de volver al listado...
+            ->assertSeeInOrder(['href="'.route('pacientes').'"', 'Volver a pacientes'], false)
+            // ...y es el de alta porque no tiene la casilla de "Activo", que solo va al editar.
+            ->assertDontSee('Destildar para darlo de baja');
     }
 
     public function test_direccion_ve_la_ficha_del_paciente(): void
@@ -184,7 +187,10 @@ class PacientesTest extends TestCase
         $this->get("/administracion/pacientes/{$paciente->id}/editar")
             ->assertOk()
             ->assertSeeLivewire(Formulario::class)
-            ->assertSee('Editar paciente');
+            // El formulario ya no lleva título: se reconoce por el link de volver al listado...
+            ->assertSeeInOrder(['href="'.route('pacientes').'"', 'Volver a pacientes'], false)
+            // ...y es el de edición porque tiene la casilla de "Activo", que no va al crear.
+            ->assertSee('Destildar para darlo de baja');
     }
 
     public function test_la_ficha_de_un_paciente_que_no_existe_da_404(): void
@@ -673,16 +679,31 @@ class PacientesTest extends TestCase
         $this->assertSame(2, substr_count($html, '1a">'));
     }
 
-    public function test_la_ficha_no_tiene_links_de_volver_ni_al_listado_administrativo(): void
+    public function test_la_ficha_tiene_el_link_para_volver_a_mis_pacientes(): void
     {
         $paciente = $this->crearPaciente();
         $lucia = User::factory()->create();
         $paciente->profesionales()->attach($lucia->id);
 
-        // Se vuelve con el menú de arriba. Sobre todo, no hay link al listado de pacientes, que a un profesional le da 403.
+        // Apunta al Inicio ("Mis pacientes"), que es desde donde se abre la ficha y al que entra cualquier usuario.
         Livewire::actingAs($lucia)
             ->test(Ficha::class, ['paciente' => $paciente])
-            ->assertDontSee('← Mis pacientes')
+            ->assertSeeInOrder(['href="'.route('inicio').'"', 'Volver a mis pacientes'], false);
+
+        // A Dirección le sale el mismo link: tampoco vuelve al listado administrativo.
+        $this->ficha($paciente)
+            ->assertSeeInOrder(['href="'.route('inicio').'"', 'Volver a mis pacientes'], false);
+    }
+
+    public function test_la_ficha_no_tiene_link_al_listado_administrativo(): void
+    {
+        $paciente = $this->crearPaciente();
+        $lucia = User::factory()->create();
+        $paciente->profesionales()->attach($lucia->id);
+
+        // El link de volver va al Inicio, no al listado de pacientes, que a un profesional le da 403.
+        Livewire::actingAs($lucia)
+            ->test(Ficha::class, ['paciente' => $paciente])
             ->assertDontSeeHtml('href="'.route('pacientes').'"');
     }
 

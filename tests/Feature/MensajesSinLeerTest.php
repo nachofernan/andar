@@ -120,6 +120,26 @@ class MensajesSinLeerTest extends TestCase
         $this->assertSame([$paciente->id => 1], $lucia->mensajesSinLeer()->all());
     }
 
+    public function test_no_cuentan_los_mensajes_de_pacientes_inactivos(): void
+    {
+        $ana = $this->crearPaciente('Ana', 'Zapata', '52118304');
+        $bruno = $this->crearPaciente('Bruno', 'Arnal', '40111222');
+        $lucia = $this->crearProfesionalDelEquipo($ana, 'Lucía Pérez');
+        $marta = $this->crearProfesionalDelEquipo($ana, 'Marta Díaz');
+        $bruno->profesionales()->attach([$lucia->id, $marta->id]);
+        $this->crearMensaje($ana, $marta);
+        $this->crearMensaje($bruno, $marta);
+        $this->crearMensaje($bruno, $marta);
+        $bruno->update(['activo' => false]); // Se lo da de baja con mensajes que Lucía nunca vio.
+
+        // Bruno sigue siendo de su equipo, pero dado de baja ni figura en la lista.
+        $this->assertSame([$ana->id => 1], $lucia->mensajesSinLeer()->all());
+
+        // No se marcaron como leídos, solo se dejan de avisar: si se lo reactiva, vuelven a contar.
+        $bruno->update(['activo' => true]);
+        $this->assertEquals([$ana->id => 1, $bruno->id => 2], $lucia->mensajesSinLeer()->all());
+    }
+
     // ---------------------------------------------------------------- Marcar como leído
 
     public function test_abrir_el_historial_siendo_del_equipo_deja_ese_paciente_sin_mensajes_sin_leer(): void
@@ -268,6 +288,50 @@ class MensajesSinLeerTest extends TestCase
             ->assertSee('Todavía no tenés pacientes asignados.');
     }
 
+    public function test_los_mensajes_de_un_paciente_inactivo_no_suman_en_el_saludo_del_inicio(): void
+    {
+        $ana = $this->crearPaciente('Ana', 'Zapata', '52118304');
+        $bruno = $this->crearPaciente('Bruno', 'Arnal', '40111222');
+        $lucia = $this->crearProfesionalDelEquipo($ana, 'Lucía Pérez');
+        $marta = $this->crearProfesionalDelEquipo($ana, 'Marta Díaz');
+        $bruno->profesionales()->attach([$lucia->id, $marta->id]);
+        $this->crearMensaje($ana, $marta);
+        $this->crearMensaje($ana, $marta);
+        $this->crearMensaje($bruno, $marta);
+        $bruno->update(['activo' => false]);
+
+        // Con el de Bruno serían "3 mensajes sin leer de 2 pacientes": dado de baja, no suma ni como mensaje ni como paciente.
+        $html = Livewire::actingAs($lucia)
+            ->test(Inicio::class)
+            ->assertSeeInOrder(['Tenés', '>2 mensajes sin leer</span>', 'de 1 paciente.'], false)
+            // Aunque se lo traiga a la tabla con el filtro de estado, su renglón no lleva aviso.
+            ->set('estado', 'todos')
+            ->assertSee('Arnal, Bruno')
+            ->html();
+
+        // Dos avisos: el del saludo y el del renglón de Ana.
+        $this->assertSame(2, substr_count($html, ' sin leer</span>'));
+    }
+
+    public function test_si_lo_unico_sin_leer_es_de_un_paciente_inactivo_el_inicio_dice_que_no_hay_mensajes_nuevos(): void
+    {
+        $ana = $this->crearPaciente('Ana', 'Zapata', '52118304');
+        $bruno = $this->crearPaciente('Bruno', 'Arnal', '40111222');
+        $lucia = $this->crearProfesionalDelEquipo($ana, 'Lucía Pérez');
+        $marta = $this->crearProfesionalDelEquipo($ana, 'Marta Díaz');
+        $bruno->profesionales()->attach([$lucia->id, $marta->id]);
+        $this->crearMensaje($bruno, $marta);
+        $bruno->update(['activo' => false]);
+
+        $html = Livewire::actingAs($lucia)
+            ->test(Inicio::class)
+            ->assertSee('No tenés mensajes nuevos.')
+            ->html();
+
+        // Ni en el saludo ni en la tabla queda un aviso.
+        $this->assertStringNotContainsString('sin leer</span>', $html);
+    }
+
     // ---------------------------------------------------------------- Lista administrativa de pacientes
 
     public function test_la_lista_administrativa_no_avisa_los_mensajes_sin_leer(): void
@@ -327,6 +391,21 @@ class MensajesSinLeerTest extends TestCase
         $this->crearMensaje($ana, $lucia);
 
         $this->actingAs($lucia)->get('/')->assertOk()->assertDontSee(self::PUNTITO, false);
+    }
+
+    public function test_los_mensajes_de_un_paciente_inactivo_no_prenden_el_puntito_del_menu(): void
+    {
+        $bruno = $this->crearPaciente('Bruno', 'Arnal', '40111222');
+        $lucia = $this->crearProfesionalDelEquipo($bruno, 'Lucía Pérez');
+        $marta = $this->crearProfesionalDelEquipo($bruno, 'Marta Díaz');
+        $this->crearMensaje($bruno, $marta);
+
+        // Mientras está activo, el menú avisa (así se sabe que lo que lo apaga es la baja y no otra cosa).
+        $this->actingAs($lucia)->get('/mi-perfil')->assertOk()->assertSee(self::PUNTITO, false);
+
+        $bruno->update(['activo' => false]);
+
+        $this->get('/mi-perfil')->assertOk()->assertDontSee(self::PUNTITO, false);
     }
 
     public function test_al_abrir_la_ficha_el_menu_de_esa_misma_pagina_ya_no_avisa_los_mensajes_de_ese_paciente(): void

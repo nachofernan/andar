@@ -38,14 +38,17 @@
 
         {{--
             Los mensajes, del más viejo (arriba) al más nuevo (abajo), con scroll propio.
-            Alto: como mínimo un poco más de media pantalla (min-h); si la columna de la derecha de la ficha es más
-            alta que eso, esta zona crece hasta igualarla (flex-1), así el historial nunca queda más corto que el costado.
+            Alto: como mínimo, lo que queda de pantalla (min-h): el alto de la ventana (100vh) menos unos 31rem, que es
+            lo que ocupan la barra de arriba, el link de volver, la cabecera, los filtros y el cuadro de escribir. Así la
+            ficha entra justa y la página no scrollea. En ventanas muy bajas no baja de 20rem.
+            Si la columna de la derecha de la ficha es más alta que eso, esta zona crece hasta igualarla (flex-1),
+            así el historial nunca queda más corto que el costado.
             basis-0 hace que su contenido no cuente para el alto: por largo que sea el historial, scrollea adentro.
             Alpine (x-data) lo deja parado en lo último al abrir la ficha y cada vez que se envía un mensaje,
             se anota un cambio o se tocan los filtros (los tres eventos que dispara Livewire). El pequeño retardo es para esperar
             a que el mensaje nuevo ya esté dibujado.
         --}}
-        <div class="grid min-h-[55vh] flex-1 basis-0 content-start gap-4 overflow-y-auto px-6 py-4"
+        <div class="grid min-h-[max(20rem,calc(100vh-31rem))] flex-1 basis-0 content-start gap-4 overflow-y-auto px-6 py-4"
             x-data="{ irAlFinal() { setTimeout(() => $el.scrollTop = $el.scrollHeight, 50) } }"
             x-init="irAlFinal()"
             x-on:mensaje-enviado.window="irAlFinal()"

@@ -11,7 +11,6 @@
 <form wire:submit="guardar" class="grid gap-4">
     <div>
         <a href="{{ route('usuarios') }}" class="text-sm font-medium text-muted hover:text-brand">← Volver a profesionales</a>
-        <h1 class="text-[22px] font-bold">{{ $usuarioId ? 'Editar profesional' : 'Nuevo profesional' }}</h1>
     </div>
 
     <div class="grid grid-cols-[1fr_22rem] items-start gap-4">

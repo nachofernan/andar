@@ -33,7 +33,7 @@ Depende del rol (ver `docs/roles.md`):
 
 ## La ficha
 
-Es la pantalla principal de cada paciente. Se abre desde el Inicio; arriba tiene el link **← Mis pacientes** para volver y, para Dirección, **Editar paciente**.
+Es la pantalla principal de cada paciente. Se abre desde el Inicio; arriba tiene el link **← Volver a mis pacientes**, que lleva de nuevo al Inicio. El historial ocupa el alto que queda de la ventana, así la ficha entra entera sin tener que scrollear la página (los mensajes scrollean por dentro).
 
 - **Cabecera**: un círculo con las iniciales, el nombre y el estado; debajo el DNI, la edad, el grado y la escuela; el **equipo**, con las etiquetas de color de las disciplinas de cada profesional; y a la derecha nacimiento, ingreso y obra social.
 - **Historial del equipo**: ocupa el lugar principal, con forma de chat y el cuadro de escribir abajo. Es también la bitácora de los cambios del paciente. Todo el detalle está en `docs/mensajes.md`.

@@ -61,7 +61,7 @@ Las tarjetas de listado (Mis pacientes, Pacientes, Profesionales, Disciplinas) t
 
 ## Formularios
 
-Los tres formularios de administración (paciente, profesional, disciplina) y **Mi perfil** tienen la misma forma: a la izquierda los datos, en **secciones**; a la derecha un **panel** que queda fijo al bajar con el scroll, con lo que se elige (equipo, disciplinas) y los botones **Guardar** y **Cancelar**. Arriba, un link para volver al listado.
+Los tres formularios de administración (paciente, profesional, disciplina) y **Mi perfil** tienen la misma forma: a la izquierda los datos, en **secciones**; a la derecha un **panel** que queda fijo al bajar con el scroll, con lo que se elige (equipo, disciplinas) y los botones **Guardar** y **Cancelar**. Arriba, solo un link para volver al listado: no llevan título ("Editar paciente", "Nuevo profesional"), porque las secciones ya dicen qué se está cargando.
 
 Piezas comunes, en `resources/views/components/formulario/`:
 

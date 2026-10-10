@@ -59,7 +59,7 @@ Por dentro: el selector de archivos escribe en una propiedad "de paso" (`nuevos`
 
 La app avisa cuando hay mensajes que todavía no viste. No manda mails ni notificaciones del navegador: los avisos están dentro de la app.
 
-**Qué cuenta como "sin leer"**: un mensaje (o una entrada de la bitácora) de un paciente de tu equipo, hecho por otra persona, posterior a la última vez que abriste la ficha de ese paciente. Tus propios mensajes nunca cuentan.
+**Qué cuenta como "sin leer"**: un mensaje (o una entrada de la bitácora) de un paciente de tu equipo, hecho por otra persona, posterior a la última vez que abriste la ficha de ese paciente. Tus propios mensajes nunca cuentan. Tampoco cuentan los de pacientes **inactivos** (dados de baja): no prenden el puntito ni suman en el saludo.
 
 **Cuándo pasa a leído**: al **abrir la ficha** del paciente. Entrar a la ficha marca todo su historial como leído; no hay que apretar nada.
 

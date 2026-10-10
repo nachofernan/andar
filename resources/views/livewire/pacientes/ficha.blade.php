@@ -1,8 +1,13 @@
 {{--
     Vista de App\Livewire\Pacientes\Ficha.
-    Arriba la cabecera del paciente; debajo, dos columnas: el historial (ancho) y, al costado, equipo, diagnóstico y archivos.
+    Arriba el link para volver y la cabecera del paciente; debajo, dos columnas: el historial (ancho) y, al costado, equipo, diagnóstico y archivos.
 --}}
 <div class="grid gap-4">
+    {{-- Link para volver a "Mis pacientes" (el Inicio), que es desde donde se abre la ficha. --}}
+    <div>
+        <a href="{{ route('inicio') }}" class="text-sm font-medium text-muted hover:text-brand">← Volver a mis pacientes</a>
+    </div>
+
     {{-- Cabecera: quién es y, a la derecha, los datos sueltos. Los opcionales vacíos se muestran con una raya. --}}
     <div class="flex flex-wrap items-start gap-x-6 gap-y-4 rounded-[20px] bg-white p-6 shadow-[0_10px_40px] shadow-brand/15">
         {{-- Círculo con las iniciales del paciente. --}}

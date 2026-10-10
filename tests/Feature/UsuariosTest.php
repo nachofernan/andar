@@ -108,7 +108,11 @@ class UsuariosTest extends TestCase
         $this->get('/administracion/profesionales/crear')
             ->assertOk()
             ->assertSeeLivewire(Formulario::class)
-            ->assertSee('Nuevo profesional');
+            // El formulario ya no lleva título: se reconoce por el link de volver al listado...
+            ->assertSeeInOrder(['href="'.route('usuarios').'"', 'Volver a profesionales'], false)
+            // ...y es el de alta por la aclaración de la contraseña, que cambia según se cree o se edite.
+            ->assertSee('Con esta entra la primera vez')
+            ->assertDontSee('reemplaza a la que tiene hoy');
     }
 
     public function test_direccion_ve_la_pantalla_de_editar_profesional(): void
@@ -119,7 +123,11 @@ class UsuariosTest extends TestCase
         $this->get("/administracion/profesionales/{$usuario->id}/editar")
             ->assertOk()
             ->assertSeeLivewire(Formulario::class)
-            ->assertSee('Editar profesional');
+            // El formulario ya no lleva título: se reconoce por el link de volver al listado...
+            ->assertSeeInOrder(['href="'.route('usuarios').'"', 'Volver a profesionales'], false)
+            // ...y es el de edición por la aclaración de la contraseña, que cambia según se cree o se edite.
+            ->assertSee('reemplaza a la que tiene hoy')
+            ->assertDontSee('Con esta entra la primera vez');
     }
 
     public function test_editar_un_profesional_que_no_existe_da_404(): void
