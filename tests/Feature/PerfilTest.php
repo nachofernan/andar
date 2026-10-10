@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Livewire\Perfil;
+use App\Models\Disciplina;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
@@ -177,5 +178,51 @@ class PerfilTest extends TestCase
             ->assertHasNoErrors();
 
         $this->assertSame($hashOriginal, $usuario->refresh()->password);
+    }
+
+    // ---------------------------------------------------------------- Tarjeta "En el centro" (solo lectura)
+
+    public function test_la_tarjeta_en_el_centro_muestra_a_un_profesional_su_rol_y_sus_disciplinas_con_color(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->disciplinas()->attach([
+            Disciplina::create(['nombre' => 'Psicología', 'color' => '#aa0000'])->id,
+            Disciplina::create(['nombre' => 'Fonoaudiología', 'color' => '#00aa00'])->id,
+        ]);
+
+        $html = Livewire::actingAs($usuario)
+            ->test(Perfil::class)
+            // Una etiqueta por disciplina, en orden alfabético (se cargaron al revés a propósito).
+            ->assertSeeInOrder(['En el centro', 'Rol', '>Profesional</span>', 'Disciplinas', 'Fonoaudiología', 'Psicología'], false)
+            ->assertSeeHtml('style="color: #00aa00; background-color: #00aa001a">Fonoaudiología</span>')
+            ->assertSeeHtml('style="color: #aa0000; background-color: #aa00001a">Psicología</span>')
+            ->html();
+
+        $this->assertStringNotContainsString('>Admin</span>', $html);
+        // Es solo para mirar: el rol y las disciplinas no tienen ningún control conectado al componente.
+        $this->assertStringNotContainsString('wire:model="disciplinas"', $html);
+        $this->assertStringNotContainsString('wire:model="admin"', $html);
+        $this->assertStringNotContainsString('type="checkbox"', $html);
+    }
+
+    public function test_la_tarjeta_en_el_centro_le_dice_admin_a_quien_es_de_direccion(): void
+    {
+        $html = Livewire::actingAs(User::factory()->direccion()->create())
+            ->test(Perfil::class)
+            ->assertSeeInOrder(['En el centro', 'Rol', '>Admin</span>'], false)
+            ->html();
+
+        $this->assertStringNotContainsString('>Profesional</span>', $html);
+    }
+
+    public function test_la_tarjeta_en_el_centro_muestra_una_raya_si_no_tiene_disciplinas(): void
+    {
+        $html = Livewire::actingAs(User::factory()->create())
+            ->test(Perfil::class)
+            ->assertSeeInOrder(['Disciplinas', '—'])
+            ->html();
+
+        // Es la única raya de la pantalla.
+        $this->assertSame(1, substr_count($html, '—'));
     }
 }

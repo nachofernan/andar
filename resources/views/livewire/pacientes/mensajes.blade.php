@@ -1,104 +1,204 @@
-{{-- Vista de App\Livewire\Pacientes\Mensajes: historial de mensajes del equipo, dentro de la ficha. --}}
-<div class="grid gap-4 rounded-[20px] bg-white p-6 shadow-[0_10px_40px] shadow-brand/15">
-    <h2 class="font-semibold">Historial del equipo</h2>
-
+{{--
+    Vista de App\Livewire\Pacientes\Mensajes: el historial del equipo con forma de chat, dentro de la ficha.
+    De arriba hacia abajo: los filtros, los mensajes (con scroll propio) y el cuadro para escribir.
+--}}
+{{-- flex-col: los tres bloques van apilados y el del medio (los mensajes) se estira para ocupar el alto que sobre. --}}
+<div class="flex flex-col rounded-[20px] bg-white shadow-[0_10px_40px] shadow-brand/15">
     @if (! $esDelEquipo)
-        <p class="text-sm text-muted">Solo el equipo de este paciente puede ver el historial.</p>
+        <div class="grid gap-2 p-6">
+            <h2 class="font-semibold">Historial del equipo</h2>
+            <p class="text-sm text-muted">Solo el equipo de este paciente puede ver el historial.</p>
+        </div>
     @else
-        {{-- Formulario para escribir un mensaje nuevo. --}}
-        <form wire:submit="enviar" class="grid gap-2">
+        {{-- Arriba, los filtros: por fechas (desde / hasta) y por tipo. wire:model.live vuelve a armar la lista apenas cambian. --}}
+        <div class="flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-line px-6 py-4">
+            {{-- Fechas: se puede cargar una sola (solo "desde" o solo "hasta") o las dos. --}}
+            <label class="flex items-center gap-2 text-xs text-muted">Desde
+                <input type="date" wire:model.live="desde" max="{{ $hasta }}"
+                    class="rounded-xl border-[1.5px] border-line px-3.5 py-2 text-sm text-ink outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15">
+            </label>
+            <label class="flex items-center gap-2 text-xs text-muted">hasta
+                <input type="date" wire:model.live="hasta" min="{{ $desde }}"
+                    class="rounded-xl border-[1.5px] border-line px-3.5 py-2 text-sm text-ink outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15">
+            </label>
+
+            <select wire:model.live="filtro" aria-label="Mostrar"
+                class="rounded-xl border-[1.5px] border-line bg-white px-3.5 py-2 text-sm outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15">
+                <option value="">Todos</option>
+                @foreach ($tipos as $clave => $nombre)
+                    <option value="{{ $clave }}">{{ $nombre }}</option>
+                @endforeach
+            </select>
+
+            {{-- Vuelve a mostrar todo. Solo aparece si hay algún filtro puesto. --}}
+            @if ($hayFiltro)
+                <button type="button" wire:click="borrarFiltros" class="cursor-pointer text-sm font-semibold text-brand hover:underline">Borrar filtros</button>
+            @endif
+        </div>
+
+        {{--
+            Los mensajes, del más viejo (arriba) al más nuevo (abajo), con scroll propio.
+            Alto: como mínimo un poco más de media pantalla (min-h); si la columna de la derecha de la ficha es más
+            alta que eso, esta zona crece hasta igualarla (flex-1), así el historial nunca queda más corto que el costado.
+            basis-0 hace que su contenido no cuente para el alto: por largo que sea el historial, scrollea adentro.
+            Alpine (x-data) lo deja parado en lo último al abrir la ficha y cada vez que se envía un mensaje,
+            se anota un cambio o se tocan los filtros (los tres eventos que dispara Livewire). El pequeño retardo es para esperar
+            a que el mensaje nuevo ya esté dibujado.
+        --}}
+        <div class="grid min-h-[55vh] flex-1 basis-0 content-start gap-4 overflow-y-auto px-6 py-4"
+            x-data="{ irAlFinal() { setTimeout(() => $el.scrollTop = $el.scrollHeight, 50) } }"
+            x-init="irAlFinal()"
+            x-on:mensaje-enviado.window="irAlFinal()"
+            x-on:paciente-actualizado.window="irAlFinal()"
+            x-on:ir-al-final.window="irAlFinal()">
+
+            {{-- Agrupados por día, con un separador arriba de cada grupo. --}}
+            @forelse ($mensajes->groupBy(fn ($mensaje) => $mensaje->created_at->format('Y-m-d')) as $dia => $delDia)
+                @php
+                    $fecha = \Illuminate\Support\Carbon::parse($dia);
+                    // "hoy", "ayer" o la fecha escrita (con el año solo si no es el actual).
+                    $separador = match (true) {
+                        $fecha->isToday() => 'hoy',
+                        $fecha->isYesterday() => 'ayer',
+                        default => $fecha->locale('es')->isoFormat($fecha->isCurrentYear() ? 'dddd D [de] MMMM' : 'D [de] MMMM [de] YYYY'),
+                    };
+                @endphp
+                <p wire:key="dia-{{ $dia }}" class="text-center text-xs text-muted">— {{ $separador }} —</p>
+
+                @foreach ($delDia as $mensaje)
+                    @php
+                        $esMio = $mensaje->user_id === auth()->id();
+                        // "Nuevo" = lo escribió otra persona después de la última vez que abrí este historial.
+                        $esNuevo = ! $esMio && ($vistoHasta === null || $mensaje->created_at->gt($vistoHasta));
+                    @endphp
+
+                    @if ($mensaje->esActualizacion())
+                        {{-- Entrada automática de la bitácora: un cambio en los datos del paciente. Sin globo, centrada y chica. --}}
+                        <div wire:key="mensaje-{{ $mensaje->id }}" class="mx-auto grid w-full max-w-xl gap-1.5 rounded-xl px-4 py-3 text-xs {{ $esNuevo ? 'bg-brand-soft' : 'bg-line/40' }}">
+                            <p class="text-muted">
+                                <span class="mr-1 rounded-full bg-white px-2 py-0.5 font-semibold text-ink">Actualización</span>
+                                <span class="font-semibold text-ink">{{ $mensaje->autor->name }}</span> cambió los datos · {{ $mensaje->created_at->format('H:i') }}
+                                @if ($esNuevo)
+                                    <span class="ml-1 rounded-full bg-brand px-2 py-0.5 font-semibold text-white">Nuevo</span>
+                                @endif
+                            </p>
+
+                            @foreach ($mensaje->cambios as $cambio)
+                                @if (isset($cambio['texto']))
+                                    {{-- Cambios de equipo: vienen ya escritos ("Se sumó: ..."). --}}
+                                    <p><span class="font-semibold">{{ $cambio['campo'] }}.</span> {{ $cambio['texto'] }}</p>
+                                @elseif (mb_strlen(($cambio['antes'] ?? '').($cambio['ahora'] ?? '')) > 60)
+                                    {{-- Textos largos (el diagnóstico): antes y ahora en renglones separados. --}}
+                                    <div class="grid gap-0.5">
+                                        <p class="font-semibold">{{ $cambio['campo'] }}</p>
+                                        <p class="whitespace-pre-line text-muted"><span class="font-semibold">Antes:</span> {{ $cambio['antes'] ?? '—' }}</p>
+                                        <p class="whitespace-pre-line"><span class="font-semibold">Ahora:</span> {{ $cambio['ahora'] ?? '—' }}</p>
+                                    </div>
+                                @else
+                                    {{-- Textos cortos: en una línea, lo anterior tachado y lo nuevo al lado. --}}
+                                    <p>
+                                        <span class="font-semibold">{{ $cambio['campo'] }}:</span>
+                                        <s class="text-muted">{{ $cambio['antes'] ?? '—' }}</s> → <span class="font-semibold">{{ $cambio['ahora'] ?? '—' }}</span>
+                                    </p>
+                                @endif
+                            @endforeach
+                        </div>
+                    @else
+                        {{-- Mensaje de una persona. Los míos van a la derecha (flex-row-reverse da vuelta el orden) y en violeta clarito. --}}
+                        <div wire:key="mensaje-{{ $mensaje->id }}" class="flex items-start gap-3 {{ $esMio ? 'flex-row-reverse' : '' }}">
+                            <x-avatar :usuario="$mensaje->autor" />
+
+                            <div class="grid max-w-[75%] gap-1 {{ $esMio ? 'justify-items-end' : 'justify-items-start' }}">
+                                {{-- Quién, sus disciplinas y la hora. --}}
+                                <div class="flex flex-wrap items-center gap-1.5 text-xs {{ $esMio ? 'flex-row-reverse' : '' }}">
+                                    <span class="text-sm font-semibold">{{ $mensaje->autor->name }}</span>
+                                    @foreach ($mensaje->autor->disciplinas as $disciplina)
+                                        <x-disciplina.etiqueta :disciplina="$disciplina" class="py-0.5" />
+                                    @endforeach
+                                    <span class="text-muted">{{ $mensaje->created_at->format('H:i') }}</span>
+                                    @if ($esNuevo)
+                                        <span class="rounded-full bg-brand px-2 py-0.5 font-semibold text-white">Nuevo</span>
+                                    @endif
+                                </div>
+
+                                {{-- El globo. La esquina del lado de quien escribe va menos redondeada. --}}
+                                <div class="grid gap-1.5 rounded-2xl border px-4 py-2.5 text-sm {{ $esMio ? 'rounded-tr-md border-brand/20 bg-brand-soft' : 'rounded-tl-md border-line bg-white' }} {{ $esNuevo ? 'border-brand' : '' }}">
+                                    {{-- El tipo "Mensaje" es el común: no se etiqueta, para que resalten los demás. --}}
+                                    @if ($mensaje->tipo !== 'mensaje')
+                                        <span class="justify-self-start rounded-full bg-accent/10 px-2.5 py-0.5 text-xs font-semibold text-accent">{{ $tipos[$mensaje->tipo] ?? $mensaje->tipo }}</span>
+                                    @endif
+
+                                    {{-- whitespace-pre-line respeta los saltos de línea que se escribieron. --}}
+                                    <p class="whitespace-pre-line">{{ $mensaje->cuerpo }}</p>
+
+                                    {{-- Adjuntos del mensaje: cada uno es un link de descarga. --}}
+                                    @foreach ($mensaje->getMedia('adjuntos') as $adjunto)
+                                        <a href="{{ route('adjuntos.descargar', $adjunto) }}" class="justify-self-start break-all font-semibold text-brand hover:text-brand-dark">
+                                            📎 {{ \App\Models\Mensaje::nombreAdjunto($adjunto) }}
+                                            <span class="text-xs font-normal text-muted">({{ \App\Models\Mensaje::tamanoAdjunto($adjunto) }})</span>
+                                        </a>
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+                @endforeach
+            @empty
+                <p class="text-sm text-muted">
+                    {{ $hayFiltro ? 'No hay mensajes con esos filtros.' : 'Todavía no hay mensajes.' }}
+                </p>
+            @endforelse
+        </div>
+
+        {{-- Escribir un mensaje nuevo, al pie. --}}
+        <form wire:submit="enviar" class="grid gap-2 border-t border-line px-6 py-4">
             <textarea wire:model="cuerpo" rows="3" placeholder="Escribir un mensaje al equipo…"
                 class="rounded-xl border-[1.5px] border-line px-3.5 py-[11px] text-sm outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15"></textarea>
             @error('cuerpo') <span class="text-[13px] text-red-600">{{ $message }}</span> @enderror
 
-            {{-- Adjuntos. wire:key cambia después de cada envío para que el selector vuelva a quedar vacío. --}}
-            <label class="grid gap-1.5 text-sm font-medium">Adjuntar archivos
-                <span class="font-normal text-muted">(opcional: PDF, Word, Excel o imágenes; hasta {{ \App\Models\Mensaje::MAX_ADJUNTOS }} archivos de {{ \App\Models\Mensaje::MAX_KB_ADJUNTO / 1024 }} MB)</span>
-                <input type="file" wire:model="archivos" wire:key="archivos-{{ $envios }}" multiple
-                    class="text-sm font-normal text-muted file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-brand-soft file:px-3 file:py-1.5 file:font-semibold file:text-brand">
-            </label>
-            {{-- Se muestra solo mientras los archivos se están subiendo. --}}
-            <span wire:loading wire:target="archivos" class="text-[13px] text-muted">Subiendo archivos…</span>
-            @error('archivos') <span class="text-[13px] text-red-600">{{ $message }}</span> @enderror
-            @error('archivos.*') <span class="text-[13px] text-red-600">{{ $message }}</span> @enderror
-
-            <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap items-center gap-2">
                 <select wire:model="tipo" aria-label="Tipo de mensaje"
-                    class="rounded-xl border-[1.5px] border-line px-3.5 py-2.5 text-sm outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15">
-                    @foreach ($tipos as $clave => $nombre)
+                    class="rounded-xl border-[1.5px] border-line bg-white px-3.5 py-2 text-sm outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15">
+                    @foreach ($tiposParaEscribir as $clave => $nombre)
                         <option value="{{ $clave }}">{{ $nombre }}</option>
                     @endforeach
                 </select>
+
+                {{--
+                    Adjuntar: el selector de archivos real está oculto y se abre al hacer clic en este botón (es su <label>).
+                    Cada elección se SUMA a las anteriores (ver updatedNuevos en la clase).
+                    "accept" hace que el explorador muestre solo los tipos permitidos.
+                    wire:key cambia con cada elección y cada envío, para que el selector quede vacío y se pueda volver a usar.
+                --}}
+                <label class="cursor-pointer rounded-xl bg-brand-soft px-3.5 py-2 text-sm font-semibold text-brand transition-colors hover:bg-[#e6dfff]"
+                    title="PDF, Word, Excel o imágenes. Hasta {{ \App\Models\Mensaje::MAX_ADJUNTOS }} archivos de {{ \App\Models\Mensaje::MAX_KB_ADJUNTO / 1024 }} MB.">
+                    📎 Adjuntar
+                    <input type="file" wire:model="nuevos" wire:key="selector-{{ $envios }}-{{ count($archivos) }}" multiple class="hidden"
+                        accept="{{ collect(\App\Models\Mensaje::EXTENSIONES_ADJUNTO)->map(fn ($extension) => '.'.$extension)->join(',') }}">
+                </label>
+                {{-- Se muestra solo mientras los archivos se están subiendo. --}}
+                <span wire:loading wire:target="nuevos" class="text-[13px] text-muted">Subiendo…</span>
+
                 {{-- El botón se desactiva mientras suben los archivos, para no enviar el mensaje sin ellos. --}}
-                <button type="submit" wire:loading.attr="disabled" wire:target="archivos"
-                    class="cursor-pointer rounded-xl bg-brand px-4 py-2.5 font-semibold text-white transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50">Enviar</button>
+                <button type="submit" wire:loading.attr="disabled" wire:target="nuevos"
+                    class="ml-auto cursor-pointer rounded-xl bg-brand px-5 py-2 font-semibold text-white transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50">Enviar</button>
             </div>
             @error('tipo') <span class="text-[13px] text-red-600">{{ $message }}</span> @enderror
-        </form>
 
-        {{-- Archivos del paciente: todos los adjuntos de su historial, juntos. Solo aparece si hay alguno. --}}
-        @if ($conArchivos->isNotEmpty())
-            <div class="grid gap-2 border-t border-line pt-4 text-sm">
-                <h3 class="font-semibold">Archivos del paciente</h3>
-                @foreach ($conArchivos as $mensaje)
-                    @foreach ($mensaje->getMedia('adjuntos') as $adjunto)
-                        <div wire:key="archivo-{{ $adjunto->id }}" class="flex flex-wrap items-baseline gap-x-2">
-                            <a href="{{ route('adjuntos.descargar', $adjunto) }}" class="font-semibold text-brand hover:text-brand-dark">📎 {{ \App\Models\Mensaje::nombreAdjunto($adjunto) }}</a>
-                            <span class="text-xs text-muted">{{ \App\Models\Mensaje::tamanoAdjunto($adjunto) }} · {{ $mensaje->autor->name }} · {{ $mensaje->created_at->format('d/m/Y') }}</span>
-                        </div>
+            {{-- Archivos ya elegidos: debajo de los botones, una etiqueta por cada uno, con una ✕ para sacarlo antes de enviar. --}}
+            @if ($archivos !== [])
+                <div class="flex flex-wrap gap-2">
+                    @foreach ($archivos as $posicion => $archivo)
+                        <span wire:key="elegido-{{ $archivo->getFilename() }}" class="flex items-center gap-1.5 rounded-full bg-brand-soft py-1 pl-3 pr-1.5 text-xs text-brand">
+                            📎 {{ $archivo->getClientOriginalName() }}
+                            <button type="button" wire:click="quitarArchivo({{ $posicion }})" title="Quitar"
+                                class="grid size-5 cursor-pointer place-items-center rounded-full font-semibold hover:bg-brand hover:text-white">✕</button>
+                        </span>
                     @endforeach
-                @endforeach
-            </div>
-        @endif
-
-        {{-- Filtro por tipo. El elegido queda pintado de violeta. --}}
-        <div class="flex flex-wrap gap-2 border-t border-line pt-4">
-            @foreach (['' => 'Todos'] + $tipos as $clave => $nombre)
-                <button type="button" wire:click="$set('filtro', '{{ $clave }}')" wire:key="filtro-{{ $clave }}"
-                    class="cursor-pointer rounded-full px-3 py-1 text-xs font-semibold transition-colors {{ $filtro === $clave ? 'bg-brand text-white' : 'bg-brand-soft text-brand hover:bg-[#e6dfff]' }}">
-                    {{ $nombre }}
-                </button>
-            @endforeach
-        </div>
-
-        {{-- Mensajes, del más nuevo al más viejo. --}}
-        @forelse ($mensajes as $mensaje)
-            @php
-                // "Nuevo" = lo escribió otra persona después de la última vez que abrí este historial.
-                $esNuevo = $mensaje->user_id !== auth()->id()
-                    && ($vistoHasta === null || $mensaje->created_at->gt($vistoHasta));
-            @endphp
-            <div wire:key="mensaje-{{ $mensaje->id }}" class="grid gap-1.5 rounded-xl border p-4 text-sm {{ $esNuevo ? 'border-brand bg-brand-soft/40' : 'border-line' }}">
-                <div class="flex flex-wrap items-center gap-2">
-                    <span class="font-semibold">{{ $mensaje->autor->name }}</span>
-                    {{-- Una sola etiqueta con todas las disciplinas de quien escribió, separadas por un punto. --}}
-                    @if ($mensaje->autor->disciplinas->isNotEmpty())
-                        <span class="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand">{{ $mensaje->autor->disciplinas->pluck('nombre')->join(' · ') }}</span>
-                    @endif
-                    {{-- El tipo "Mensaje" es el común: no se etiqueta, para que resalten los demás. --}}
-                    @if ($mensaje->tipo !== 'mensaje')
-                        <span class="rounded-full bg-accent/10 px-2.5 py-1 text-xs font-semibold text-accent">{{ $tipos[$mensaje->tipo] ?? $mensaje->tipo }}</span>
-                    @endif
-                    @if ($esNuevo)
-                        <span class="rounded-full bg-brand px-2.5 py-1 text-xs font-semibold text-white">Nuevo</span>
-                    @endif
-                    <span class="ml-auto text-xs text-muted">{{ $mensaje->created_at->format('d/m/Y H:i') }}</span>
                 </div>
-                {{-- whitespace-pre-line respeta los saltos de línea que se escribieron. --}}
-                <p class="whitespace-pre-line">{{ $mensaje->cuerpo }}</p>
-
-                {{-- Adjuntos del mensaje: cada uno es un link de descarga. --}}
-                @foreach ($mensaje->getMedia('adjuntos') as $adjunto)
-                    <a href="{{ route('adjuntos.descargar', $adjunto) }}" class="justify-self-start font-semibold text-brand hover:text-brand-dark">
-                        📎 {{ \App\Models\Mensaje::nombreAdjunto($adjunto) }}
-                        <span class="text-xs font-normal text-muted">({{ \App\Models\Mensaje::tamanoAdjunto($adjunto) }})</span>
-                    </a>
-                @endforeach
-            </div>
-        @empty
-            <p class="text-sm text-muted">
-                {{ $filtro === '' ? 'Todavía no hay mensajes.' : 'No hay mensajes de este tipo.' }}
-            </p>
-        @endforelse
+            @endif
+            @error('archivos') <span class="text-[13px] text-red-600">{{ $message }}</span> @enderror
+            @error('archivos.*') <span class="text-[13px] text-red-600">{{ $message }}</span> @enderror
+        </form>
     @endif
 </div>

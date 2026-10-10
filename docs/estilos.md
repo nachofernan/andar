@@ -40,7 +40,7 @@ Además se pueden usar todas las clases estándar de Tailwind (`text-red-600`, `
 `resources/views/layouts/app.blade.php` es el marco HTML de todas las pantallas. Pone el fondo con degradé y:
 
 - **Con sesión**: una barra superior y debajo el contenido, en una columna centrada. La barra tiene:
-  - El logo y el **menú**: **Inicio** (con un puntito rojo si hay mensajes sin leer) y, solo para Dirección, **Administración**, que al hacer clic abre un menú chico con **Pacientes** y **Profesionales y disciplinas**.
+  - El logo y el **menú**: **Mis pacientes** (es el Inicio; lleva un puntito rojo si hay mensajes sin leer) y, solo para Dirección, **Administración**, que al hacer clic abre un menú chico con **Pacientes** y **Profesionales y disciplinas**.
   - A la derecha, **el nombre del usuario**: al hacer clic se abre un menú chico con **Mi perfil** y **Salir**.
 - **Sin sesión** (login): nada más; la pantalla de login se centra sola.
 
@@ -55,9 +55,13 @@ Los dos desplegables se abren y se cierran con **Alpine** (`x-data`, `@click`, `
 
 Las tablas con buscador, filtros y orden comparten sus piezas: ver `docs/tablas.md`.
 
+## Listados
+
+Las tarjetas de listado (Mis pacientes, Pacientes, Profesionales, Disciplinas) tienen dos alturas: arriba el **título con la cantidad** de filas y, a la derecha, la acción (**+ Nuevo**, un link sin fondo); abajo, el buscador y los filtros.
+
 ## Formularios
 
-Los tres formularios de administración (paciente, profesional, disciplina) tienen la misma forma: a la izquierda los datos, en **secciones**; a la derecha un **panel** que queda fijo al bajar con el scroll, con lo que se elige (equipo, disciplinas) y los botones **Guardar** y **Cancelar**. Arriba, un link para volver al listado.
+Los tres formularios de administración (paciente, profesional, disciplina) y **Mi perfil** tienen la misma forma: a la izquierda los datos, en **secciones**; a la derecha un **panel** que queda fijo al bajar con el scroll, con lo que se elige (equipo, disciplinas) y los botones **Guardar** y **Cancelar**. Arriba, un link para volver al listado.
 
 Piezas comunes, en `resources/views/components/formulario/`:
 
@@ -74,6 +78,8 @@ Cada disciplina tiene su color, que se carga en su formulario y se guarda en la 
 
 - `<x-disciplina.etiqueta :disciplina="$d" />`: la etiqueta con el nombre, la letra del color y el fondo del mismo color muy clarito.
 - `<x-disciplina.punto :disciplina="$d" />`: un circulito del color.
+
+También lo usa `<x-avatar :usuario="$u" />` (`resources/views/components/avatar.blade.php`): el círculo con las iniciales de una persona en el historial, pintado con el color de su primera disciplina.
 
 ## Tests
 

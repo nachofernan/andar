@@ -255,20 +255,19 @@ class PacientesTest extends TestCase
     {
         $lista = $this->listaConCuatroPacientes('activos');
 
-        // Cuenta lo que se ve: abre con los dos activos.
-        $lista->assertSeeHtml('>2 pacientes</span>');
+        // La etiqueta lleva solo el número (ya no dice "2 pacientes"). Cuenta lo que se ve: abre con los dos activos.
+        $lista->assertSeeHtml('text-brand">2</span>');
         // Y cambia con los filtros y el buscador.
-        $lista->set('estado', 'todos')->assertSeeHtml('>4 pacientes</span>');
-        // Con uno solo va en singular.
-        $lista->set('buscar', 'zapata')->assertSeeHtml('>1 paciente</span>');
-        $lista->set('buscar', 'nadie-se-llama-asi')->assertSeeHtml('>0 pacientes</span>');
+        $lista->set('estado', 'todos')->assertSeeHtml('text-brand">4</span>');
+        $lista->set('buscar', 'zapata')->assertSeeHtml('text-brand">1</span>');
+        $lista->set('buscar', 'nadie-se-llama-asi')->assertSeeHtml('text-brand">0</span>');
     }
 
-    public function test_la_lista_tiene_el_boton_para_cargar_un_paciente_nuevo(): void
+    public function test_la_lista_tiene_el_link_para_cargar_un_paciente_nuevo(): void
     {
-        $html = $this->lista()->assertSee('Nuevo paciente')->html();
-
-        $this->assertStringContainsString('href="'.route('pacientes.crear').'"', $html);
+        // Va dentro de la tarjeta, al lado del título: el link y enseguida su texto.
+        $this->lista()
+            ->assertSeeInOrder(['Pacientes', 'href="'.route('pacientes.crear').'"', '+ Nuevo'], false);
     }
 
     public function test_el_nombre_en_la_lista_lleva_directo_a_editar_no_a_la_ficha(): void
@@ -604,30 +603,34 @@ class PacientesTest extends TestCase
         ]);
 
         $html = $this->ficha($paciente)
-            ->assertSee('Ana Zapata')
-            ->assertSee('Activo')
-            ->assertSee('52.118.304')
-            ->assertSee('15/03/2018')
-            ->assertSee('(8 años)')
-            ->assertSee('02/04/2024')
-            ->assertSee('OSDE')
-            ->assertSee('Escuela 12')
-            ->assertSee('Tercero')
-            ->assertSee('Retraso del lenguaje')
+            // Cabecera: iniciales, nombre, estado y el renglón "DNI · edad · grado · escuela".
+            ->assertSeeInOrder(['AZ', 'Ana Zapata', 'Activo', 'DNI 52.118.304 · 8 años · Tercero · Escuela 12'])
+            // A la derecha, los datos sueltos con su título.
+            ->assertSeeInOrder(['Nacimiento', '15/03/2018', 'Ingreso', '02/04/2024', 'Obra social', 'OSDE'])
+            ->assertSeeInOrder(['Diagnóstico', 'Retraso del lenguaje'])
+            ->assertDontSee('Sin diagnóstico cargado.')
             ->html();
 
         // Con todos los opcionales cargados no queda ninguna raya.
         $this->assertSame(0, substr_count($html, '—'));
     }
 
-    public function test_la_ficha_muestra_una_raya_en_los_opcionales_vacios(): void
+    public function test_la_ficha_muestra_los_opcionales_vacios_con_una_raya_o_su_aviso(): void
     {
-        $paciente = $this->crearPaciente(); // Solo los obligatorios.
+        $this->travelTo('2026-10-08 12:00:00');
 
-        $html = $this->ficha($paciente)->html();
+        $paciente = $this->crearPaciente(['fecha_nacimiento' => '2018-03-15']); // Solo los obligatorios.
 
-        // Una raya por cada opcional: ingreso, obra social, escuela, grado y diagnóstico.
-        $this->assertSame(5, substr_count($html, '—'));
+        $html = $this->ficha($paciente)
+            ->assertSee('DNI 52.118.304 · 8 años')
+            // El diagnóstico vacío no lleva raya: lo dice con palabras.
+            ->assertSee('Sin diagnóstico cargado.')
+            ->html();
+
+        // Una raya por cada dato suelto vacío: ingreso y obra social.
+        $this->assertSame(2, substr_count($html, '—'));
+        // Sin grado ni escuela el renglón termina en la edad: queda un solo separador, no hay sueltos.
+        $this->assertSame(1, substr_count($html, ' · '));
     }
 
     public function test_la_ficha_de_un_paciente_dado_de_baja_dice_inactivo(): void
@@ -637,10 +640,17 @@ class PacientesTest extends TestCase
         $this->ficha($paciente)->assertSee('Inactivo');
     }
 
-    public function test_la_ficha_muestra_el_equipo_con_las_disciplinas_de_cada_profesional_en_una_sola_etiqueta(): void
+    public function test_las_iniciales_del_paciente_son_las_de_su_nombre_y_apellido_en_mayuscula(): void
     {
-        $psicologia = Disciplina::create(['nombre' => 'Psicología']);
-        $fonoaudiologia = Disciplina::create(['nombre' => 'Fonoaudiología']);
+        $this->assertSame('AZ', $this->crearPaciente()->iniciales);
+        // Con tilde y en minúscula: toma la letra entera (no medio carácter) y la pasa a mayúscula.
+        $this->assertSame('ÍÁ', $this->crearPaciente(['nombre' => 'íñigo', 'apellido' => 'álvarez', 'dni' => '45333444'])->iniciales);
+    }
+
+    public function test_la_ficha_muestra_el_equipo_con_una_etiqueta_por_cada_disciplina_del_profesional(): void
+    {
+        $psicologia = Disciplina::create(['nombre' => 'Psicología', 'color' => '#aa0000']);
+        $fonoaudiologia = Disciplina::create(['nombre' => 'Fonoaudiología', 'color' => '#00aa00']);
         $paciente = $this->crearPaciente();
         $lucia = User::factory()->create(['name' => 'Lucía Pérez']);
         $lucia->disciplinas()->attach([$psicologia->id, $fonoaudiologia->id]); // Tiene dos.
@@ -648,14 +658,49 @@ class PacientesTest extends TestCase
         $paciente->profesionales()->sync([$lucia->id, $marta->id]);
 
         $html = $this->ficha($paciente)
-            // Una sola etiqueta al lado del nombre, con las dos separadas por " · " y en orden alfabético.
-            ->assertSeeInOrder(['Lucía Pérez', 'Fonoaudiología · Psicología'])
-            ->assertSee('Marta Díaz')
+            // Al lado del nombre, sus disciplinas en orden alfabético (se cargaron al revés a propósito).
+            ->assertSeeInOrder(['Lucía Pérez', 'Fonoaudiología', 'Psicología', 'Marta Díaz'])
+            // Ya no van juntas en una sola etiqueta.
+            ->assertDontSee('Fonoaudiología · Psicología')
             ->assertDontSee('Todavía no tiene profesionales asignados.')
             ->html();
 
-        // El separador aparece una sola vez: Marta no tiene disciplinas, así que no lleva etiqueta (ni una vacía).
-        $this->assertSame(1, substr_count($html, ' · '));
+        // Cada disciplina es su propia etiqueta, pintada con su color.
+        $this->assertStringContainsString('style="color: #00aa00; background-color: #00aa001a">Fonoaudiología</span>', $html);
+        $this->assertStringContainsString('style="color: #aa0000; background-color: #aa00001a">Psicología</span>', $html);
+        // Son dos etiquetas en total: Marta no tiene disciplinas, así que no lleva ninguna (ni una vacía).
+        $this->assertSame(2, substr_count($html, 'background-color:'));
+    }
+
+    public function test_el_link_de_arriba_de_la_ficha_vuelve_al_inicio_y_no_al_listado_administrativo(): void
+    {
+        $paciente = $this->crearPaciente();
+        $lucia = User::factory()->create();
+        $paciente->profesionales()->attach($lucia->id);
+
+        // Antes iba al listado de pacientes, que a un profesional le da 403.
+        Livewire::actingAs($lucia)
+            ->test(Ficha::class, ['paciente' => $paciente])
+            ->assertSeeInOrder(['href="'.route('inicio').'"', '← Mis pacientes'], false)
+            ->assertDontSeeHtml('href="'.route('pacientes').'"');
+
+        // Y el destino le abre: es su pantalla de "Mis pacientes".
+        $this->actingAs($lucia)->get(route('inicio'))->assertOk();
+    }
+
+    public function test_solo_direccion_ve_en_la_ficha_el_link_para_editar_el_paciente(): void
+    {
+        $paciente = $this->crearPaciente();
+        $lucia = User::factory()->create();
+        $paciente->profesionales()->attach($lucia->id);
+
+        Livewire::actingAs($lucia)
+            ->test(Ficha::class, ['paciente' => $paciente])
+            ->assertDontSee('Editar paciente')
+            ->assertDontSeeHtml(route('pacientes.editar', $paciente));
+
+        $this->ficha($paciente)
+            ->assertSeeInOrder(['href="'.route('pacientes.editar', $paciente).'"', 'Editar paciente'], false);
     }
 
     public function test_la_ficha_avisa_cuando_el_paciente_no_tiene_equipo(): void

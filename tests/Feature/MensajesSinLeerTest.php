@@ -21,7 +21,7 @@ class MensajesSinLeerTest extends TestCase
 {
     use RefreshDatabase; // Cada test arranca con la base vacía.
 
-    // Así sale en el HTML el puntito rojo del menú, al lado de "Inicio". No lleva número: solo avisa que hay algo.
+    // Así sale en el HTML el puntito rojo del menú, en el link "Mis pacientes". No lleva número: solo avisa que hay algo.
     private const PUNTITO = 'title="Tenés mensajes sin leer"';
 
     /** Crea un paciente directo en la base (no hay factory de pacientes). Cada uno necesita un DNI distinto. */
@@ -197,8 +197,9 @@ class MensajesSinLeerTest extends TestCase
             ->test(Mensajes::class, ['paciente' => $paciente])
             // Se guarda lo que había visto ANTES de esta visita: de ahí sale qué es nuevo.
             ->assertSet('vistoHasta', '2026-10-02 12:00:00')
-            // La etiqueta va en el encabezado de cada mensaje, o sea antes de su texto. El más nuevo va arriba.
-            ->assertSeeInOrder(['Mensaje propio.', 'Nuevo', 'Mensaje sin ver.', 'Mensaje ya visto.'])
+            // El historial va del más viejo al más nuevo, y la etiqueta está en el encabezado de su mensaje
+            // (antes del texto): por eso queda entre el ya visto y el que no se había visto.
+            ->assertSeeInOrder(['Mensaje ya visto.', 'Nuevo', 'Mensaje sin ver.', 'Mensaje propio.'])
             ->html();
 
         // Una sola etiqueta: ni el ya visto ni el propio la llevan.
@@ -246,6 +247,8 @@ class MensajesSinLeerTest extends TestCase
             // ("mensaje" en singular cuando es uno solo).
             // Arriba van los que tienen mensajes sin leer (por apellido) y después el resto: por eso Carla queda última.
             ->assertSeeInOrder([
+                // Arriba, el saludo con el total: 3 mensajes de 2 pacientes.
+                'Tenés', '>3 mensajes sin leer</span>', 'de 2 pacientes.',
                 'Mis pacientes',
                 'Arnal, Bruno', '>1 mensaje sin leer</span>',
                 'Zapata, Ana', '>2 mensajes sin leer</span>',
@@ -253,8 +256,9 @@ class MensajesSinLeerTest extends TestCase
             ], false)
             ->assertDontSee('Todavía no tenés pacientes asignados.');
 
-        // Solo dos avisos: Carla, que no tiene mensajes, no lleva ninguno (ni un "0 mensajes sin leer").
-        $this->assertSame(2, substr_count($respuesta->getContent(), ' sin leer</span>'));
+        // Tres avisos: el del saludo y uno por paciente con mensajes. Carla, que no tiene, no lleva ninguno
+        // (ni un "0 mensajes sin leer").
+        $this->assertSame(3, substr_count($respuesta->getContent(), ' sin leer</span>'));
     }
 
     public function test_el_inicio_avisa_cuando_no_tengo_pacientes_asignados(): void
@@ -300,8 +304,8 @@ class MensajesSinLeerTest extends TestCase
         $html = $this->actingAs($lucia)
             ->get('/mi-perfil')
             ->assertOk()
-            // El puntito va dentro del link "Inicio" y está vacío: no dice cuántos son (acá serían 3).
-            ->assertSeeInOrder(['Inicio', self::PUNTITO.'></span>'], false)
+            // El puntito va dentro del link "Mis pacientes" y está vacío: no dice cuántos son (acá serían 3).
+            ->assertSeeInOrder(['href="'.route('inicio').'"', 'Mis pacientes', self::PUNTITO.'></span>'], false)
             ->getContent();
 
         // Uno solo, aunque los mensajes sean de dos pacientes.

@@ -149,6 +149,8 @@ class UsuariosTest extends TestCase
             ->assertSet('usuarioId', null)
             ->assertSet('name', '')
             ->assertSet('email', '')
+            ->assertSet('telefono', '')
+            ->assertSet('admin', false)
             ->assertSet('disciplinas', [])
             ->set('name', 'Ana Gómez')
             ->set('email', 'ana@andar.test')
@@ -444,26 +446,25 @@ class UsuariosTest extends TestCase
             ->assertSeeHtml('style="color: #ff0000; background-color: #ff00001a">Psicología</span>');
     }
 
-    // ---------------------------------------------------------------- Formulario: rol
+    // ---------------------------------------------------------------- Formulario: administrador
 
-    public function test_el_rol_se_elige_con_una_opcion_por_cada_rol_y_no_con_un_desplegable(): void
+    public function test_el_rol_se_elige_con_una_sola_casilla_es_administrador(): void
     {
         $html = $this->formulario()
-            // Un radio por rol, los dos conectados a la misma propiedad.
-            ->assertSeeHtml('type="radio" wire:model="rol" value="direccion"')
-            ->assertSeeHtml('type="radio" wire:model="rol" value="profesional"')
-            // Con el nombre lindo de cada rol al lado.
-            ->assertSee('Dirección')
-            ->assertSee('Profesional')
+            ->assertSeeHtml('type="checkbox" wire:model="admin"')
+            ->assertSee('Es administrador')
             ->html();
 
+        // Ya no hay un radio por rol ni un desplegable.
+        $this->assertStringNotContainsString('type="radio"', $html);
+        $this->assertStringNotContainsString('wire:model="rol"', $html);
         $this->assertStringNotContainsString('<select', $html);
     }
 
-    public function test_un_usuario_nuevo_queda_como_profesional_si_no_se_toca_el_rol(): void
+    public function test_un_usuario_nuevo_queda_como_profesional_si_no_se_tilda_administrador(): void
     {
         $this->formulario()
-            ->assertSet('rol', 'profesional') // Arranca con la opción "Profesional" elegida.
+            ->assertSet('admin', false) // La casilla arranca sin tildar.
             ->set('name', 'Ana Gómez')
             ->set('email', 'ana@andar.test')
             ->call('guardar')
@@ -473,12 +474,12 @@ class UsuariosTest extends TestCase
         $this->assertSame(['profesional'], User::where('email', 'ana@andar.test')->firstOrFail()->getRoleNames()->all());
     }
 
-    public function test_se_puede_crear_un_usuario_de_direccion(): void
+    public function test_tildar_administrador_crea_un_usuario_de_direccion(): void
     {
         $this->formulario()
             ->set('name', 'Ana Gómez')
             ->set('email', 'ana@andar.test')
-            ->set('rol', 'direccion')
+            ->set('admin', true)
             ->call('guardar')
             ->assertHasNoErrors();
 
@@ -487,41 +488,28 @@ class UsuariosTest extends TestCase
         $this->assertSame(['direccion'], $usuario->getRoleNames()->all());
         $this->assertTrue($usuario->esDireccion());
 
-        // El formulario de alta se abre siempre en "Profesional": no arrastra el rol del último que se cargó.
-        Livewire::test(Formulario::class)->assertSet('rol', 'profesional');
+        // El formulario de alta se abre siempre sin tildar: no arrastra lo del último que se cargó.
+        Livewire::test(Formulario::class)->assertSet('admin', false);
     }
 
-    public function test_un_rol_que_no_esta_en_la_lista_da_error(): void
-    {
-        $this->formulario()
-            ->set('name', 'Ana Gómez')
-            ->set('email', 'ana@andar.test')
-            ->set('rol', 'superadmin') // No existe: la pantalla no lo ofrece, pero se podría mandar igual.
-            ->call('guardar')
-            ->assertHasErrors(['rol' => 'in'])
-            ->assertSee('Elegí un rol de la lista.');
-
-        $this->assertDatabaseMissing('users', ['email' => 'ana@andar.test']);
-    }
-
-    public function test_editar_carga_el_rol_del_usuario_y_guardar_lo_cambia(): void
+    public function test_editar_carga_si_es_administrador_y_guardar_lo_cambia(): void
     {
         $usuario = User::factory()->create(); // Profesional.
 
         $this->formulario($usuario)
-            ->assertSet('rol', 'profesional')
-            ->set('rol', 'direccion')
+            ->assertSet('admin', false)
+            ->set('admin', true)
             ->call('guardar')
             ->assertHasNoErrors();
 
         // Queda solo con el rol nuevo: no acumula el anterior.
         $this->assertSame(['direccion'], $usuario->fresh()->getRoleNames()->all());
 
-        // Y al volver a abrirlo, ya está elegida la opción "Dirección".
-        Livewire::test(Formulario::class, ['usuario' => $usuario->fresh()])->assertSet('rol', 'direccion');
+        // Y al volver a abrirlo, la casilla ya está tildada.
+        Livewire::test(Formulario::class, ['usuario' => $usuario->fresh()])->assertSet('admin', true);
     }
 
-    public function test_no_se_puede_sacar_el_rol_direccion_a_la_unica_persona_de_direccion(): void
+    public function test_no_se_puede_destildar_administrador_a_la_unica_persona_de_direccion(): void
     {
         // Quien tiene la sesión es la única persona de Dirección. Hay un profesional, pero no cuenta.
         $direccion = $this->entrarComoDireccion();
@@ -529,10 +517,11 @@ class UsuariosTest extends TestCase
 
         // Si se pudiera, el centro quedaría sin nadie que cargue usuarios ni pacientes.
         Livewire::test(Formulario::class, ['usuario' => $direccion])
-            ->set('rol', 'profesional')
+            ->assertSet('admin', true)
+            ->set('admin', false)
             ->call('guardar')
-            ->assertHasErrors('rol')
-            ->assertSee('Es la única persona de Dirección: antes hay que darle ese rol a otra.')
+            ->assertHasErrors('admin')
+            ->assertSeeHtml('Es la única persona administradora: antes hay que hacer administradora a otra.')
             ->assertNoRedirect();
 
         $this->assertSame(['direccion'], $direccion->fresh()->getRoleNames()->all());
@@ -552,17 +541,190 @@ class UsuariosTest extends TestCase
         $this->assertTrue($direccion->fresh()->esDireccion());
     }
 
-    public function test_se_puede_sacar_el_rol_direccion_cuando_hay_otra_persona_de_direccion(): void
+    public function test_se_puede_destildar_administrador_cuando_hay_otra_persona_de_direccion(): void
     {
         $this->entrarComoDireccion();
         $otra = User::factory()->direccion()->create();
 
         Livewire::test(Formulario::class, ['usuario' => $otra])
-            ->set('rol', 'profesional')
+            ->set('admin', false)
             ->call('guardar')
             ->assertHasNoErrors();
 
         $this->assertSame(['profesional'], $otra->fresh()->getRoleNames()->all());
+    }
+
+    // ---------------------------------------------------------------- Formulario: teléfono
+
+    public function test_al_crear_se_guarda_el_telefono_sin_espacios_de_mas(): void
+    {
+        $this->formulario()
+            ->set('name', 'Ana Gómez')
+            ->set('email', 'ana@andar.test')
+            ->set('telefono', '  11 2233-4455 ')
+            ->call('guardar')
+            ->assertHasNoErrors();
+
+        // Se guarda tal cual se escribió (sin cifrar: es contacto laboral), solo sin los espacios de las puntas.
+        $this->assertDatabaseHas('users', ['email' => 'ana@andar.test', 'telefono' => '11 2233-4455']);
+    }
+
+    public function test_el_telefono_es_opcional_y_vacio_se_guarda_como_null(): void
+    {
+        $this->formulario()
+            ->set('name', 'Ana Gómez')
+            ->set('email', 'ana@andar.test')
+            ->set('telefono', '   ') // Solo espacios cuenta como vacío.
+            ->call('guardar')
+            ->assertHasNoErrors();
+
+        $this->assertNull(User::where('email', 'ana@andar.test')->firstOrFail()->telefono);
+    }
+
+    public function test_editar_carga_el_telefono_y_guardar_lo_cambia(): void
+    {
+        $usuario = User::factory()->create(['telefono' => '1122334455']);
+
+        $this->formulario($usuario)
+            ->assertSet('telefono', '1122334455')
+            ->set('telefono', '1199887766')
+            ->call('guardar')
+            ->assertHasNoErrors();
+
+        $this->assertSame('1199887766', $usuario->fresh()->telefono);
+    }
+
+    public function test_vaciar_el_telefono_al_editar_lo_deja_en_null(): void
+    {
+        $usuario = User::factory()->create(['telefono' => '1122334455']);
+
+        $this->formulario($usuario)
+            ->set('telefono', '')
+            ->call('guardar')
+            ->assertHasNoErrors();
+
+        $this->assertNull($usuario->fresh()->telefono);
+    }
+
+    public function test_un_usuario_sin_telefono_abre_el_formulario_con_el_campo_vacio(): void
+    {
+        $usuario = User::factory()->create(['telefono' => null]);
+
+        $this->formulario($usuario)->assertSet('telefono', '');
+    }
+
+    public function test_el_telefono_admite_hasta_50_caracteres(): void
+    {
+        $this->formulario()
+            ->set('name', 'Ana Gómez')
+            ->set('email', 'ana@andar.test')
+            ->set('telefono', str_repeat('1', 51))
+            ->call('guardar')
+            ->assertHasErrors(['telefono' => 'max'])
+            ->assertSeeHtml('El texto es demasiado largo.')
+            // Con 50 justos pasa.
+            ->set('telefono', str_repeat('1', 50))
+            ->call('guardar')
+            ->assertHasNoErrors();
+
+        $this->assertSame(str_repeat('1', 50), User::where('email', 'ana@andar.test')->firstOrFail()->telefono);
+    }
+
+    // ---------------------------------------------------------------- Formulario: contraseña
+
+    public function test_al_crear_la_contrasena_viene_precargada_con_la_inicial_y_a_la_vista(): void
+    {
+        $this->formulario()
+            ->assertSet('password', Formulario::CONTRASENA_INICIAL)
+            // A la vista (no con puntitos): la escribe Dirección para pasársela a la persona.
+            ->assertSeeHtml('type="text" wire:model="password"')
+            ->assertDontSeeHtml('type="password"');
+    }
+
+    public function test_al_crear_se_puede_cambiar_la_contrasena_precargada_y_el_usuario_entra_con_esa(): void
+    {
+        $this->formulario()
+            ->set('name', 'Ana Gómez')
+            ->set('email', 'ana@andar.test')
+            ->set('password', 'clave-elegida')
+            ->call('guardar')
+            ->assertHasNoErrors();
+
+        $usuario = User::where('email', 'ana@andar.test')->firstOrFail();
+
+        // En la base queda encriptada, no el texto.
+        $this->assertNotSame('clave-elegida', $usuario->password);
+        $this->assertTrue(Hash::check('clave-elegida', $usuario->password));
+        $this->assertFalse(Hash::check(Formulario::CONTRASENA_INICIAL, $usuario->password));
+    }
+
+    public function test_al_crear_la_contrasena_es_obligatoria(): void
+    {
+        $this->formulario()
+            ->set('name', 'Ana Gómez')
+            ->set('email', 'ana@andar.test')
+            ->set('password', '') // Se borró la precargada.
+            ->call('guardar')
+            ->assertHasErrors(['password' => 'required']);
+
+        $this->assertDatabaseMissing('users', ['email' => 'ana@andar.test']);
+    }
+
+    public function test_al_crear_una_contrasena_de_menos_de_8_caracteres_da_error(): void
+    {
+        $this->formulario()
+            ->set('name', 'Ana Gómez')
+            ->set('email', 'ana@andar.test')
+            ->set('password', '1234567')
+            ->call('guardar')
+            ->assertHasErrors(['password' => 'min'])
+            ->assertSeeHtml('La contraseña tiene que tener al menos 8 caracteres.');
+
+        $this->assertDatabaseMissing('users', ['email' => 'ana@andar.test']);
+    }
+
+    public function test_al_editar_la_contrasena_arranca_vacia(): void
+    {
+        $usuario = User::factory()->create(['password' => 'clave-propia']);
+
+        // Ni la inicial ni (mucho menos) la que tiene guardada: vacío = no tocarla.
+        $html = $this->formulario($usuario)
+            ->assertSet('password', '')
+            ->assertSee('Dejar vacío para no cambiarla')
+            ->html();
+
+        $this->assertStringNotContainsString($usuario->fresh()->password, $html);
+    }
+
+    public function test_al_editar_escribir_una_contrasena_reemplaza_a_la_que_tenia(): void
+    {
+        $usuario = User::factory()->create(['email' => 'ana@andar.test', 'password' => 'clave-propia']);
+
+        $this->formulario($usuario)
+            ->set('password', 'clave-nueva-1')
+            ->call('guardar')
+            ->assertHasNoErrors()
+            ->assertRedirect(route('usuarios'));
+
+        $usuario->refresh();
+
+        $this->assertTrue(Hash::check('clave-nueva-1', $usuario->password));
+        $this->assertFalse(Hash::check('clave-propia', $usuario->password));
+    }
+
+    public function test_al_editar_una_contrasena_corta_da_error_y_no_cambia_la_que_tenia(): void
+    {
+        $usuario = User::factory()->create(['name' => 'Ana Gómez', 'password' => 'clave-propia']);
+
+        // Tampoco se guarda el nombre nuevo: si un campo falla, no se guarda ninguno.
+        $this->formulario($usuario)
+            ->set('name', 'Otro nombre')
+            ->set('password', 'corta')
+            ->call('guardar')
+            ->assertHasErrors(['password' => 'min']);
+
+        $this->assertTrue(Hash::check('clave-propia', $usuario->fresh()->password));
+        $this->assertSame('Ana Gómez', $usuario->fresh()->name);
     }
 
     // ---------------------------------------------------------------- Listado
@@ -630,21 +792,32 @@ class UsuariosTest extends TestCase
     {
         $lista = $this->listaConTresPersonas();
 
+        // La etiqueta lleva solo el número (ya no dice "3 profesionales"), al lado del título.
         // Cuenta a todos los usuarios, también a quien es de Dirección.
-        $lista->assertSeeHtml('>3 profesionales</span>');
-        // Cuenta lo que se ve: cambia con el buscador. Con uno solo va en singular.
-        $lista->set('buscar', 'gomez')->assertSeeHtml('>1 profesional</span>');
-        $lista->set('buscar', 'nadie-se-llama-asi')->assertSeeHtml('>0 profesionales</span>');
+        $lista->assertSeeHtmlInOrder(['Profesionales', 'text-brand">3</span>']);
+        // Cuenta lo que se ve: cambia con el buscador.
+        $lista->set('buscar', 'gomez')->assertSeeHtmlInOrder(['Profesionales', 'text-brand">1</span>']);
+        // La segunda etiqueta con número es la del panel de disciplinas (acá no hay ninguna): esa no depende del buscador.
+        $this->assertSame(2, substr_count($lista->set('buscar', 'nadie-se-llama-asi')->html(), 'text-brand">0</span>'));
     }
 
-    public function test_el_nombre_en_la_lista_lleva_a_editar_y_hay_un_boton_para_crear(): void
+    public function test_el_nombre_en_la_lista_lleva_a_editar_y_hay_un_link_para_crear(): void
     {
         $usuario = User::factory()->create(['name' => 'Ana Gómez']);
 
-        $html = $this->lista()->assertSee('Nuevo profesional')->html();
+        $this->lista()
+            // El link "+ Nuevo" va dentro de la tarjeta, al lado del título.
+            ->assertSeeInOrder(['Profesionales', 'href="'.route('usuarios.crear').'"', '+ Nuevo'], false)
+            ->assertSeeInOrder(['href="'.route('usuarios.editar', $usuario).'"', 'Ana Gómez'], false);
+    }
 
-        $this->assertStringContainsString('href="'.route('usuarios.editar', $usuario).'"', $html);
-        $this->assertStringContainsString('href="'.route('usuarios.crear').'"', $html);
+    public function test_la_columna_pacientes_va_alineada_a_la_derecha(): void
+    {
+        $usuario = User::factory()->create(['name' => 'Ana Gómez']);
+        $this->asignarPacientes($usuario, 3);
+
+        // El número de cada fila va en una celda con "text-right".
+        $this->lista()->assertSeeHtml('<td class="px-4 py-3 text-right text-muted">3</td>');
     }
 
     // ---------------------------------------------------------------- Listado: buscador

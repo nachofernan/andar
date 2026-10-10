@@ -8,6 +8,7 @@ use App\Models\Disciplina;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -369,50 +370,153 @@ class DisciplinasTest extends TestCase
         $this->assertSame('#00aa55', $disciplina->fresh()->color);
     }
 
-    // ---------------------------------------------------------------- Profesionales de la disciplina (al editar)
+    // ---------------------------------------------------------------- Profesionales de la disciplina
 
-    public function test_al_editar_se_ven_los_profesionales_que_tienen_la_disciplina(): void
+    public function test_el_formulario_muestra_una_casilla_por_cada_usuario_ordenados_por_nombre(): void
+    {
+        $psicologia = Disciplina::create(['nombre' => 'Psicología']);
+        // Se cargan desordenados: tienen que salir por nombre. Zulema la tiene; Ana no.
+        $zulema = User::factory()->create(['name' => 'Zulema Ruiz']);
+        $zulema->disciplinas()->attach($psicologia->id);
+        $ana = User::factory()->create(['name' => 'Ana Gómez']);
+
+        $formulario = $this->formulario($psicologia);
+        $direccion = auth()->user(); // Quien tiene la sesión también es un usuario: también se puede tildar.
+
+        // La vista recibe a TODOS los usuarios (no solo a los que ya la tienen), por nombre.
+        $esperados = collect([$ana, $zulema, $direccion])->sortBy('name')->pluck('name')->all();
+        $this->assertSame($esperados, $formulario->viewData('usuarios')->pluck('name')->all());
+
+        // Cada uno con su casilla, conectada a la propiedad "profesionales".
+        foreach ([$ana, $zulema, $direccion] as $usuario) {
+            $formulario->assertSeeHtml('type="checkbox" wire:model="profesionales" value="'.$usuario->id.'"');
+        }
+
+        // Ya no es una lista de solo lectura con links al formulario de cada profesional.
+        $formulario->assertDontSee('Todavía nadie.')
+            ->assertDontSeeHtml(route('usuarios.editar', $zulema));
+    }
+
+    public function test_editar_carga_tildados_a_los_profesionales_que_tienen_la_disciplina(): void
     {
         $psicologia = Disciplina::create(['nombre' => 'Psicología']);
         $fonoaudiologia = Disciplina::create(['nombre' => 'Fonoaudiología']);
-        // Se cargan desordenados: tienen que salir por nombre.
         $zulema = User::factory()->create(['name' => 'Zulema Ruiz']);
         $zulema->disciplinas()->attach($psicologia->id);
         $ana = User::factory()->create(['name' => 'Ana Gómez']);
         $ana->disciplinas()->attach([$psicologia->id, $fonoaudiologia->id]);
-        // Pedro tiene otra disciplina: no tiene que aparecer.
+        // Pedro tiene otra disciplina: no tiene que venir tildado.
         User::factory()->create(['name' => 'Pedro Suelto'])->disciplinas()->attach($fonoaudiologia->id);
 
-        $this->formulario($psicologia)
-            // Cada nombre es un link al formulario de ese profesional (ahí es donde se le cambian las disciplinas).
-            ->assertSeeInOrder([
-                'Profesionales',
-                'href="'.route('usuarios.editar', $ana).'"', 'Ana Gómez',
-                'href="'.route('usuarios.editar', $zulema).'"', 'Zulema Ruiz',
-            ], false)
-            ->assertDontSee('Pedro Suelto')
-            ->assertDontSee('Todavía nadie.');
+        // Los ids van como texto, para que coincidan con las casillas. El orden no importa: se comparan ordenados.
+        $tildados = $this->formulario($psicologia)->get('profesionales');
+        sort($tildados);
+
+        $this->assertSame([(string) $zulema->id, (string) $ana->id], $tildados);
     }
 
-    public function test_al_editar_una_disciplina_que_nadie_tiene_lo_avisa(): void
+    public function test_al_crear_el_formulario_arranca_sin_nadie_tildado_y_se_puede_elegir_quienes_la_tienen(): void
+    {
+        $ana = User::factory()->create(['name' => 'Ana Gómez']);
+        $zulema = User::factory()->create(['name' => 'Zulema Ruiz']);
+        $pedro = User::factory()->create(['name' => 'Pedro Suelto']); // No se tilda.
+
+        $this->formulario()
+            ->assertSet('profesionales', [])
+            // Las casillas están también al crear, no solo al editar.
+            ->assertSee('Quiénes tienen esta disciplina.')
+            ->assertSee('Ana Gómez')
+            ->set('nombre', 'Psicología')
+            ->set('profesionales', [(string) $ana->id, (string) $zulema->id])
+            ->call('guardar')
+            ->assertHasNoErrors()
+            ->assertRedirect(route('usuarios'));
+
+        $disciplina = Disciplina::where('nombre', 'Psicología')->firstOrFail();
+
+        // No son una columna de la disciplina: quedan en la tabla intermedia disciplina_user.
+        $this->assertDatabaseCount('disciplina_user', 2);
+        $this->assertDatabaseHas('disciplina_user', ['disciplina_id' => $disciplina->id, 'user_id' => $ana->id]);
+        $this->assertDatabaseHas('disciplina_user', ['disciplina_id' => $disciplina->id, 'user_id' => $zulema->id]);
+        $this->assertDatabaseMissing('disciplina_user', ['user_id' => $pedro->id]);
+    }
+
+    public function test_se_puede_crear_una_disciplina_sin_elegir_a_nadie(): void
+    {
+        User::factory()->create();
+
+        $this->formulario()->set('nombre', 'Psicología')->call('guardar')->assertHasNoErrors();
+
+        $this->assertDatabaseCount('disciplinas', 1);
+        $this->assertDatabaseCount('disciplina_user', 0);
+    }
+
+    public function test_al_editar_guardar_deja_exactamente_a_los_tildados_sin_tocar_sus_otras_disciplinas(): void
     {
         $psicologia = Disciplina::create(['nombre' => 'Psicología']);
-        User::factory()->create(['name' => 'Ana Gómez']); // Existe, pero no tiene la disciplina.
+        $fonoaudiologia = Disciplina::create(['nombre' => 'Fonoaudiología']);
+        $ana = User::factory()->create(['name' => 'Ana Gómez']);
+        $ana->disciplinas()->attach([$psicologia->id, $fonoaudiologia->id]);
+        $zulema = User::factory()->create(['name' => 'Zulema Ruiz']);
+        $zulema->disciplinas()->attach($psicologia->id);
+        $pedro = User::factory()->create(['name' => 'Pedro Suelto']);
 
         $this->formulario($psicologia)
-            ->assertSee('Todavía nadie.')
-            ->assertDontSee('Ana Gómez');
+            // Se destilda Ana, queda Zulema y se tilda Pedro.
+            ->set('profesionales', [(string) $zulema->id, (string) $pedro->id])
+            ->call('guardar')
+            ->assertHasNoErrors()
+            ->assertRedirect(route('usuarios'));
+
+        $this->assertDatabaseMissing('disciplina_user', ['disciplina_id' => $psicologia->id, 'user_id' => $ana->id]);
+        $this->assertDatabaseHas('disciplina_user', ['disciplina_id' => $psicologia->id, 'user_id' => $zulema->id]);
+        $this->assertDatabaseHas('disciplina_user', ['disciplina_id' => $psicologia->id, 'user_id' => $pedro->id]);
+        // A Ana se le sacó solo Psicología: su otra disciplina sigue.
+        $this->assertDatabaseHas('disciplina_user', ['disciplina_id' => $fonoaudiologia->id, 'user_id' => $ana->id]);
+        $this->assertDatabaseCount('disciplina_user', 3);
     }
 
-    public function test_al_crear_no_se_muestra_el_bloque_de_profesionales(): void
+    public function test_destildar_a_todos_al_editar_deja_la_disciplina_sin_profesionales(): void
     {
-        User::factory()->create(['name' => 'Ana Gómez']);
+        $psicologia = Disciplina::create(['nombre' => 'Psicología']);
+        User::factory()->create()->disciplinas()->attach($psicologia->id);
+        User::factory()->create()->disciplinas()->attach($psicologia->id);
 
-        // Una disciplina que todavía no existe no puede tener a nadie: el bloque ni aparece.
+        $this->formulario($psicologia)
+            ->set('profesionales', [])
+            ->call('guardar')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseCount('disciplina_user', 0);
+        // Se les saca el vínculo, pero las personas siguen existiendo (las dos, más quien tiene la sesión).
+        $this->assertDatabaseCount('users', 3);
+    }
+
+    public function test_guardar_sin_tocar_las_casillas_conserva_a_los_profesionales(): void
+    {
+        $psicologia = Disciplina::create(['nombre' => 'Psicologia']);
+        $ana = User::factory()->create();
+        $ana->disciplinas()->attach($psicologia->id);
+
+        // Cambiar solo el nombre no le saca la disciplina a nadie.
+        $this->formulario($psicologia)->set('nombre', 'Psicología')->call('guardar')->assertHasNoErrors();
+
+        $this->assertDatabaseCount('disciplina_user', 1);
+        $this->assertDatabaseHas('disciplina_user', ['disciplina_id' => $psicologia->id, 'user_id' => $ana->id]);
+    }
+
+    public function test_un_profesional_inexistente_da_error_y_no_guarda_nada(): void
+    {
         $this->formulario()
-            ->assertDontSee('Quiénes tienen esta disciplina')
-            ->assertDontSee('Todavía nadie.')
-            ->assertDontSee('Ana Gómez');
+            ->set('nombre', 'Psicología')
+            ->set('profesionales', ['999']) // No hay ningún usuario con ese id.
+            ->call('guardar')
+            // El error queda anotado en la casilla que falló (la primera de la lista: posición 0).
+            ->assertHasErrors(['profesionales.0' => 'exists'])
+            ->assertSeeHtml('Uno de los profesionales elegidos no existe.');
+
+        $this->assertDatabaseCount('disciplinas', 0);
+        $this->assertDatabaseCount('disciplina_user', 0);
     }
 
     // ---------------------------------------------------------------- Panel de disciplinas (en el listado)
@@ -444,8 +548,14 @@ class DisciplinasTest extends TestCase
 
         $this->assertSame(['Fonoaudiología' => 1, 'Psicología' => 2, 'Psicomotricidad' => 0], $cantidades);
 
-        // Y en la pantalla cada número va pegado al nombre de su disciplina.
-        $lista->assertSeeInOrder(['Fonoaudiología', '>1</span>', 'Psicología', '>2</span>', 'Psicomotricidad', '>0</span>'], false);
+        // Y en la pantalla cada número va en la celda de al lado del nombre de su disciplina.
+        // Se mira solo el panel (lo que sigue a su columna "Profesionales"): la tabla de la izquierda también tiene celdas con números.
+        $panel = Str::after($lista->html(), 'Profesionales</th>');
+
+        $this->assertMatchesRegularExpression(
+            '/Fonoaudiología.*?text-right text-muted">1<\/td>.*?Psicología.*?text-right text-muted">2<\/td>.*?Psicomotricidad.*?text-right text-muted">0<\/td>/su',
+            $panel,
+        );
     }
 
     public function test_el_panel_no_cambia_la_cantidad_al_filtrar_la_tabla(): void
@@ -489,12 +599,37 @@ class DisciplinasTest extends TestCase
         $html = $this->lista()
             // El renglón entero es el link: primero la dirección y adentro el nombre.
             ->assertSeeInOrder(['href="'.route('disciplinas.editar', $disciplina).'"', 'Psicología'], false)
-            ->assertSeeInOrder(['href="'.route('disciplinas.crear').'"', 'Nueva disciplina'], false)
+            // El link para crear va dentro de la tarjeta del panel, al lado del título.
+            ->assertSeeInOrder(['Disciplinas', 'href="'.route('disciplinas.crear').'"', '+ Nueva'], false)
             ->html();
 
         // Ya no hay un link "Editar" aparte, y cada disciplina tiene un solo link.
         $this->assertStringNotContainsString('Editar', $html);
         $this->assertSame(1, substr_count($html, 'href="'.route('disciplinas.editar', $disciplina).'"'));
+    }
+
+    public function test_el_panel_es_una_tabla_y_toda_la_fila_lleva_a_editar_la_disciplina(): void
+    {
+        $disciplina = Disciplina::create(['nombre' => 'Psicología']);
+
+        $this->lista()
+            // Encabezados de la tabla del panel, y la fila con su clic.
+            ->assertSeeInOrder([
+                '>Disciplina</th>', 'Profesionales</th>',
+                'wire:key="disciplina-'.$disciplina->id.'"',
+                "window.location = '".route('disciplinas.editar', $disciplina)."'",
+            ], false);
+    }
+
+    public function test_al_lado_del_titulo_del_panel_va_solo_el_numero_de_disciplinas(): void
+    {
+        Disciplina::create(['nombre' => 'Psicología']);
+        Disciplina::create(['nombre' => 'Fonoaudiología']);
+
+        // Se mira lo que sigue al título del panel (<h2>): la otra etiqueta con número es la de profesionales.
+        $panel = Str::after($this->lista()->html(), '<h2');
+
+        $this->assertMatchesRegularExpression('/^[^<]*>\s*Disciplinas\s*<span[^>]*>2<\/span>/u', $panel);
     }
 
     public function test_en_el_panel_cada_disciplina_lleva_un_puntito_de_su_color(): void

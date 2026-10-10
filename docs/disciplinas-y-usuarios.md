@@ -14,8 +14,8 @@ Es solo un listado, en dos partes:
   - **Nombre**, con el correo debajo, más chico. Quien es de Dirección lleva al lado la etiqueta **Admin** (no hay columna de rol).
   - **Disciplinas**, una etiqueta por cada una, con su color.
   - **Pacientes**: cuántos atiende (cuenta activos e inactivos).
-  - Tiene buscador (nombre o correo), filtro por disciplina y se ordena por nombre o por cantidad de pacientes (ver `docs/tablas.md`). Clic en una fila lleva a editar a ese profesional. Arriba, el botón **Nuevo profesional** y, al lado del título, cuántos hay en la tabla.
-- **A la derecha, el panel de disciplinas**: cada una con un circulito de su color y la cantidad de profesionales que la tienen (quien tiene dos disciplinas cuenta en las dos). **Clic en una lleva a su pantalla**, donde se ve y se edita. Arriba, el botón **Nueva disciplina**.
+  - Tiene buscador (nombre o correo), filtro por disciplina y se ordena por nombre o por cantidad de pacientes (ver `docs/tablas.md`). Clic en una fila lleva a editar a ese profesional. Arriba, dentro de la tarjeta, el título con la cantidad que hay en la tabla y el link **+ Nuevo**.
+- **A la derecha, la tabla de disciplinas**: cada una con un circulito de su color y la cantidad de profesionales que la tienen (quien tiene dos disciplinas cuenta en las dos). **Clic en una lleva a su pantalla**, donde se ve y se edita. Arriba, el título con la cantidad y el link **+ Nueva**.
 
 ## Los formularios
 
@@ -34,16 +34,20 @@ Cada formulario es un solo componente para crear y editar: si la URL trae un reg
 
 - **Nombre**: obligatorio y no se puede repetir.
 - **Color**: con el que se pintan las etiquetas de esa disciplina en toda la app. Se elige con el selector de colores o escribiendo el código en **hexa** (numeral y seis caracteres, por ejemplo `#7c5cf0`); los dos campos manejan el mismo valor y al lado se ve cómo queda la etiqueta. Toda disciplina nace con el violeta de la app (`Disciplina::COLOR_INICIAL`). Conviene elegir colores no muy claros: la etiqueta usa ese color para la letra.
-- Al editar, el panel de la derecha muestra **qué profesionales la tienen**. Es solo para mirar: se cambia desde el formulario de cada profesional.
+- **Profesionales**: en el panel de la derecha hay un renglón por cada usuario, para tildar quiénes tienen esta disciplina. Sirve al crearla (para cargarla ya con su gente) y al editarla. Es el mismo dato que se tilda en el formulario de cada profesional, visto desde el otro lado.
 
 Dónde se ve el color: en las etiquetas de disciplina de la tabla de profesionales y de los formularios, en el circulito del panel de disciplinas, y en el equipo de cada paciente (listado de pacientes y formulario de paciente). Cómo está hecho: `docs/estilos.md`, sección Color de las disciplinas.
 
 ### Profesionales (usuarios)
 
 - **Nombre** y **email** son obligatorios. El email no se puede repetir.
-- **Rol**: Dirección o Profesional, como dos opciones para elegir, cada una con una línea que explica qué puede hacer. Un usuario nuevo viene como Profesional. No se puede pasar a Profesional a la única persona de Dirección (ver `docs/roles.md`).
+- **Teléfono / WhatsApp**: opcional. Es el mismo dato que cada uno puede cambiar en Mi perfil.
+- **Es administrador**: una casilla. Tildada, el usuario queda con el rol Dirección; sin tildar, con el rol Profesional (que es como nace). No se le puede sacar a la única persona administradora (ver `docs/roles.md`).
 - **Disciplinas**: en el panel de la derecha hay un renglón por cada disciplina cargada. Se pueden tildar **varias** (por ejemplo, alguien que es psicóloga y psicopedagoga), una sola o ninguna (por ejemplo, administración). Al editar, destildar una y guardar se la quita.
-- **Contraseña**: no hay campo acá. Todo usuario nuevo se crea con la contraseña **`password`** (constante `CONTRASENA_INICIAL` en `app/Livewire/Usuarios/Formulario.php`). Editar un usuario desde acá no cambia su contraseña: cada uno cambia la suya desde **Mi perfil** (ver `docs/perfil.md`).
+- **Contraseña** (mínimo 8 caracteres). Se ve escrita, no con puntitos, porque la carga Dirección para pasársela a la persona.
+  - Al **crear**, viene precargada con **`password`** (constante `CONTRASENA_INICIAL` en `app/Livewire/Usuarios/Formulario.php`) y se puede cambiar ahí mismo.
+  - Al **editar**, arranca vacía: si se deja así, no se toca; si se escribe algo, reemplaza a la que tenía (sirve cuando alguien se la olvidó).
+  - Después cada uno cambia la suya desde **Mi perfil** (ver `docs/perfil.md`).
 
 ## Archivos
 

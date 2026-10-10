@@ -12,7 +12,7 @@ use Livewire\Livewire;
 use Tests\TestCase;
 
 /**
- * Pruebas del Inicio: las tarjetas de resumen y la tabla "Mis pacientes"
+ * Pruebas del Inicio: el saludo con el aviso de mensajes sin leer y la tabla "Mis pacientes"
  * (quién ve qué paciente, el buscador, los filtros, el orden y la columna "Última actividad").
  * El aviso con la cantidad de mensajes sin leer de cada paciente se prueba en MensajesSinLeerTest.
  *
@@ -558,16 +558,15 @@ class InicioTest extends TestCase
             ->assertSee('Zapata, Ana');
     }
 
-    // ---------------------------------------------------------------- Tarjetas de resumen
+    // ---------------------------------------------------------------- Saludo
 
-    public function test_las_tarjetas_muestran_el_resumen_de_mis_pacientes(): void
+    public function test_el_saludo_nombra_al_usuario_y_dice_cuantos_mensajes_sin_leer_tiene_y_de_cuantos_pacientes(): void
     {
-        $lucia = User::factory()->create();
-        $marta = User::factory()->create();
+        $lucia = User::factory()->create(['name' => 'Lucía Pérez']);
+        $marta = User::factory()->create(['name' => 'Marta Díaz']);
         $ana = $this->crearPacienteDe([$lucia, $marta], 'Zapata', 'Ana');
         $bruno = $this->crearPacienteDe([$lucia, $marta], 'Arnal', 'Bruno');
-        $this->crearPacienteDe([$lucia, $marta], 'Molina', 'Carla'); // Activa, sin mensajes.
-        $this->crearPacienteDe([$lucia, $marta], 'Álvarez', 'Dana', ['activo' => false]); // No cuenta como activa.
+        $this->crearPacienteDe([$lucia, $marta], 'Molina', 'Carla'); // Sin mensajes.
         $ajeno = $this->crearPacienteDe([$marta], 'Ruiz', 'Emma'); // No es de Lucía: no cuenta en nada.
         $this->crearMensaje($ana, $marta);
         $this->crearMensaje($ana, $marta);
@@ -575,23 +574,41 @@ class InicioTest extends TestCase
         $this->crearMensaje($bruno, $lucia); // Propio: no está sin leer.
         $this->crearMensaje($ajeno, $marta);
 
-        $inicio = Livewire::actingAs($lucia)->test(Inicio::class);
-
-        $this->assertSame([
-            'Pacientes activos' => 3,
-            'Pacientes con mensajes sin leer' => 2,
-            'Mensajes sin leer' => 3,
-        ], $inicio->viewData('resumen'));
-
-        // En la pantalla, cada número va arriba de su texto. Las tarjetas son lo único que usa <p> para un número.
-        $inicio->assertSeeInOrder([
-            '>3</p>', 'Pacientes activos',
-            '>2</p>', 'Pacientes con mensajes sin leer',
-            '>3</p>', 'Mensajes sin leer',
-        ], false);
+        Livewire::actingAs($lucia)
+            ->test(Inicio::class)
+            // El saludo va arriba de la tabla.
+            ->assertSeeInOrder(['Hola, Lucía Pérez', 'Tenés', '>3 mensajes sin leer</span>', 'de 2 pacientes.', 'Mis pacientes'], false)
+            ->assertDontSee('No tenés mensajes nuevos.');
     }
 
-    public function test_las_tarjetas_no_cambian_con_el_buscador_ni_los_filtros(): void
+    public function test_el_saludo_va_en_singular_cuando_es_un_mensaje_de_un_paciente(): void
+    {
+        $lucia = User::factory()->create();
+        $marta = User::factory()->create();
+        $ana = $this->crearPacienteDe([$lucia, $marta], 'Zapata', 'Ana');
+        $this->crearMensaje($ana, $marta);
+
+        Livewire::actingAs($lucia)
+            ->test(Inicio::class)
+            ->assertSeeInOrder(['Tenés', '>1 mensaje sin leer</span>', 'de 1 paciente.'], false);
+    }
+
+    public function test_el_saludo_avisa_cuando_no_hay_mensajes_nuevos(): void
+    {
+        $lucia = User::factory()->create(['name' => 'Lucía Pérez']);
+        $ana = $this->crearPacienteDe([$lucia], 'Zapata', 'Ana');
+        $this->crearMensaje($ana, $lucia); // Propio: no cuenta.
+
+        $html = Livewire::actingAs($lucia)
+            ->test(Inicio::class)
+            ->assertSeeInOrder(['Hola, Lucía Pérez', 'No tenés mensajes nuevos.'])
+            ->html();
+
+        // Ni un "Tenés 0 mensajes sin leer".
+        $this->assertStringNotContainsString('sin leer</span>', $html);
+    }
+
+    public function test_el_saludo_no_cambia_con_el_buscador_ni_los_filtros(): void
     {
         $lucia = User::factory()->create();
         $marta = User::factory()->create();
@@ -599,28 +616,48 @@ class InicioTest extends TestCase
         $this->crearPacienteDe([$lucia, $marta], 'Arnal', 'Bruno');
         $this->crearMensaje($ana, $marta);
 
-        $esperado = ['Pacientes activos' => 2, 'Pacientes con mensajes sin leer' => 1, 'Mensajes sin leer' => 1];
-
-        $inicio = Livewire::actingAs($lucia)->test(Inicio::class);
-        $this->assertSame($esperado, $inicio->viewData('resumen'));
-
-        // La tabla queda vacía, pero las tarjetas siguen contando sobre todos mis pacientes.
-        $inicio->set('buscar', 'nadie-se-llama-asi')->assertSee(self::SIN_COINCIDENCIAS);
-        $this->assertSame($esperado, $inicio->viewData('resumen'));
-
-        $inicio->set('buscar', '')->set('estado', 'inactivos')->set('soloSinLeer', true);
-        $this->assertSame($esperado, $inicio->viewData('resumen'));
+        // La tabla queda vacía, pero el saludo sigue contando sobre todos mis pacientes.
+        Livewire::actingAs($lucia)
+            ->test(Inicio::class)
+            ->set('buscar', 'nadie-se-llama-asi')
+            ->assertSeeHtml(self::SIN_COINCIDENCIAS)
+            ->assertSeeHtml('>1 mensaje sin leer</span>')
+            ->set('buscar', '')
+            ->set('estado', 'inactivos')
+            ->assertSeeHtml('>1 mensaje sin leer</span>');
     }
 
-    public function test_sin_pacientes_las_tarjetas_quedan_en_cero(): void
+    public function test_ya_no_hay_tarjetas_de_resumen(): void
     {
-        $inicio = Livewire::actingAs(User::factory()->create())->test(Inicio::class);
+        $lucia = User::factory()->create();
+        $this->crearPacienteDe([$lucia], 'Zapata', 'Ana');
 
-        $this->assertSame([
-            'Pacientes activos' => 0,
-            'Pacientes con mensajes sin leer' => 0,
-            'Mensajes sin leer' => 0,
-        ], $inicio->viewData('resumen'));
+        // Se sacaron las tres tarjetas y el dato "resumen" que las alimentaba.
+        Livewire::actingAs($lucia)
+            ->test(Inicio::class)
+            ->assertViewMissing('resumen')
+            ->assertDontSee('Pacientes activos')
+            ->assertDontSee('Pacientes con mensajes sin leer');
+    }
+
+    public function test_al_lado_del_titulo_va_solo_el_numero_de_pacientes_que_hay_en_la_tabla(): void
+    {
+        $lucia = User::factory()->create();
+        $this->crearPacienteDe([$lucia], 'Zapata', 'Ana');
+        $this->crearPacienteDe([$lucia], 'Arnal', 'Bruno');
+        $this->crearPacienteDe([$lucia], 'Álvarez', 'Dana', ['activo' => false]);
+
+        // Así sale la etiqueta: el número solo, sin la palabra "pacientes".
+        $etiqueta = fn (int $cantidad) => 'text-brand">'.$cantidad.'</span>';
+
+        Livewire::actingAs($lucia)
+            ->test(Inicio::class)
+            // Cuenta lo que se ve: abre con los dos activos.
+            ->assertSeeInOrder(['Mis pacientes', $etiqueta(2)], false)
+            // Y cambia con los filtros y el buscador.
+            ->set('estado', 'todos')->assertSeeHtml($etiqueta(3))
+            ->set('buscar', 'zapata')->assertSeeHtml($etiqueta(1))
+            ->set('buscar', 'nadie-se-llama-asi')->assertSeeHtml($etiqueta(0));
     }
 
     // ---------------------------------------------------------------- Columna "Última actividad"

@@ -171,7 +171,7 @@ class RolesTest extends TestCase
             ->test(FormularioUsuario::class)
             ->set('name', 'Ana Gómez')
             ->set('email', 'ana@andar.test')
-            ->set('rol', 'direccion'); // El caso más grave: fabricarse un usuario de Dirección.
+            ->set('admin', true); // El caso más grave: fabricarse un usuario de Dirección.
 
         $this->actingAs(User::factory()->create());
 
@@ -180,13 +180,13 @@ class RolesTest extends TestCase
         $this->assertDatabaseMissing('users', ['email' => 'ana@andar.test']);
     }
 
-    public function test_un_profesional_no_puede_cambiarse_el_rol_a_direccion(): void
+    public function test_un_profesional_no_puede_hacerse_administrador(): void
     {
         $lucia = User::factory()->create();
 
         $pantalla = Livewire::actingAs(User::factory()->direccion()->create())
             ->test(FormularioUsuario::class, ['usuario' => $lucia])
-            ->set('rol', 'direccion');
+            ->set('admin', true); // Tildar "Es administrador" = rol Dirección.
 
         $this->actingAs($lucia);
 
@@ -293,7 +293,7 @@ class RolesTest extends TestCase
         Livewire::test(Lista::class)
             ->assertSee('Zapata, Ana')
             ->assertSee('Arnal, Bruno')
-            ->assertSee('Nuevo paciente');
+            ->assertSee('+ Nuevo'); // El link para cargar un paciente.
     }
 
     // ---------------------------------------------------------------- Ficha
@@ -427,7 +427,8 @@ class RolesTest extends TestCase
         $this->actingAs(User::factory()->create())
             ->get('/')
             ->assertOk()
-            ->assertSee('Inicio')
+            // El link del menú al Inicio ahora dice "Mis pacientes".
+            ->assertSeeInOrder(['href="'.route('inicio').'"', 'Mis pacientes'], false)
             ->assertDontSee('Administración')
             ->assertDontSee('Profesionales y disciplinas')
             // Tampoco quedan los links escondidos en el HTML.
@@ -441,7 +442,7 @@ class RolesTest extends TestCase
 
         $this->get('/')
             ->assertOk()
-            ->assertSee('Inicio')
+            ->assertSeeInOrder(['href="'.route('inicio').'"', 'Mis pacientes'], false)
             // "Administración" ya no es un link: es un botón que abre un desplegable con sus dos pantallas.
             ->assertSeeInOrder([
                 'Administración',
@@ -489,13 +490,10 @@ class RolesTest extends TestCase
                 ->assertOk()
                 ->assertDontSee('Administración')
                 ->assertDontSee('Profesionales y disciplinas')
-                ->assertDontSee(route('usuarios'), false);
-        }
-
-        // El link al listado de pacientes se comprueba aparte y sin la ficha: la ficha tiene su propio
-        // "Volver a la lista", que apunta a esa misma dirección y no es parte del menú.
-        foreach (['/', '/mi-perfil'] as $url) {
-            $this->get($url)->assertDontSee(route('pacientes'), false);
+                ->assertDontSee(route('usuarios'), false)
+                // Tampoco el link al listado de pacientes. Vale también para la ficha: su link de arriba
+                // ya no va a ese listado (que a un profesional le da 403) sino al Inicio.
+                ->assertDontSee(route('pacientes'), false);
         }
     }
 }

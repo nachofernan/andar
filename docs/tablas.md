@@ -16,7 +16,7 @@ Las tres tablas principales se pueden **buscar, filtrar y ordenar** sin recargar
 
 En el Inicio hay una regla extra: **los pacientes con mensajes sin leer van siempre arriba**, se ordene por lo que se ordene. El orden elegido se aplica dentro de cada grupo (primero los que tienen sin leer, después el resto).
 
-**La tabla se acuerda de cómo la dejaste.** El buscador, los filtros y el orden se mantienen mientras dure la sesión: si filtrás, entrás a un registro y volvés, sigue filtrada. Se reinician al salir de la app (Salir). En los dos listados de administración, al lado del título se ve cuántas filas hay en ese momento ("13 pacientes").
+**La tabla se acuerda de cómo la dejaste.** El buscador, los filtros y el orden se mantienen mientras dure la sesión: si filtrás, entrás a un registro y volvés, sigue filtrada. Se reinician al salir de la app (Salir). Al lado del título de cada tabla hay una etiqueta con el número de filas que se ven en ese momento.
 
 ## Cómo está hecho
 

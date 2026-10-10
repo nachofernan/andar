@@ -16,6 +16,7 @@ Qué puede hacer cada usuario en la app. Hay **dos roles** y cada usuario tiene 
 | Ver a "mis pacientes" en el Inicio | Los que atiende | Los que atiende |
 | Ver la ficha de un paciente (datos y diagnóstico) | La de todos | Solo la de los que atiende |
 | Crear y editar pacientes, darlos de baja | Sí | No |
+| Cambiar el diagnóstico desde la ficha | Solo si está en su equipo (si no, desde el formulario) | Solo si está en su equipo |
 | Armar el equipo de un paciente | Sí | No |
 | Historial de mensajes y archivos de un paciente | **Solo si está en su equipo** | Solo si está en su equipo |
 | Profesionales y disciplinas: listar, crear y editar | Sí | No |
@@ -30,7 +31,7 @@ Qué puede hacer cada usuario en la app. Hay **dos roles** y cada usuario tiene 
 
 ## Cómo se le da el rol a un usuario
 
-En **Administración › Profesionales y disciplinas**, al crear o editar un profesional, con el desplegable **Rol**. Un usuario nuevo viene como Profesional.
+En **Administración › Profesionales y disciplinas**, al crear o editar un profesional, con la casilla **Es administrador**: tildada es Dirección; sin tildar, Profesional. Un usuario nuevo viene como Profesional.
 
 **No se puede dejar al centro sin nadie de Dirección**: si se intenta pasar a Profesional a la única persona de Dirección, la app no lo permite y avisa. Primero hay que darle Dirección a otra persona.
 
@@ -43,7 +44,7 @@ Los roles usan el paquete **Spatie Permission** (solo roles; no se usan "permiso
 - Las pantallas que son solo de Dirección llevan `use SoloDireccion;`. Ese agregado comprueba el rol cada vez que la pantalla se abre y también en cada acción (guardar, editar), así no alcanza con esconder un botón.
 - Las dos reglas sobre pacientes están en `app/Models/Paciente.php`:
   - `puedeVerlo($usuario)`: quién ve la ficha (Dirección o el equipo).
-  - `esDelEquipo($usuario)`: quién ve el historial y baja archivos (solo el equipo).
+  - `esDelEquipo($usuario)`: quién ve el historial, baja archivos y cambia el diagnóstico desde la ficha (solo el equipo).
 
 ## Archivos
 

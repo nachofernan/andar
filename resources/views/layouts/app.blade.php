@@ -24,7 +24,7 @@
 
                 {{-- Menú. El link de la zona actual se marca en violeta. --}}
                 @php
-                    // Total de mensajes sin leer del usuario, para el puntito rojo de "Inicio" (ver User::mensajesSinLeer).
+                    // Total de mensajes sin leer del usuario, para el puntito rojo de "Mis pacientes" (ver User::mensajesSinLeer).
                     $sinLeer = auth()->user()->mensajesSinLeer()->sum();
                     // ¿Estamos en alguna pantalla de administración? (todas cuelgan de /administracion)
                     $enAdministracion = request()->is('administracion*');

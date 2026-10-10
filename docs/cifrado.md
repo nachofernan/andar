@@ -9,7 +9,7 @@ Andar guarda datos de salud de menores. La ley argentina de datos personales (25
 | `pacientes` | `dni` | Sí |
 | `pacientes` | `diagnostico` | Sí |
 | `pacientes` | `nombre`, `apellido` y el resto | No |
-| `mensajes` | `cuerpo` (el texto) | Sí |
+| `mensajes` | `cuerpo` (el texto; en las entradas de la bitácora, la lista de cambios con lo anterior y lo nuevo) | Sí |
 | `mensajes` | tipo, autor, paciente y fecha | No |
 | Archivos adjuntos | contenido y nombre original | Sí |
 | Archivos adjuntos | tipo, tamaño y fecha | No |

@@ -46,16 +46,17 @@ npm run dev              # recompila solo mientras se programa
 
 Hecho:
 - Login/logout (ver `docs/login.md`). La página de inicio saluda y muestra "Mis pacientes" (ver abajo).
-- Vistas en Tailwind, con barra superior (ver `docs/estilos.md`): menú con Inicio y, para Dirección, **Administración** (todo bajo `/administracion`), que es un desplegable con Pacientes y Profesionales y disciplinas. El nombre del usuario es otro desplegable, con Mi perfil y Salir.
+- Vistas en Tailwind, con barra superior (ver `docs/estilos.md`): menú con Mis pacientes (el Inicio) y, para Dirección, **Administración** (todo bajo `/administracion`), que es un desplegable con Pacientes y Profesionales y disciplinas. El nombre del usuario es otro desplegable, con Mi perfil y Salir.
 - Tablas con buscador, filtros y orden en el Inicio y en los dos listados de administración; recuerdan cómo se las dejó durante la sesión (trait `ConTabla`; ver `docs/tablas.md`).
-- Formularios de paciente, profesional y disciplina con secciones a la izquierda y panel fijo a la derecha (piezas `x-formulario.*`; ver `docs/estilos.md`).
+- Formularios de paciente, profesional y disciplina, y Mi perfil, con secciones a la izquierda y panel fijo a la derecha (piezas `x-formulario.*`; ver `docs/estilos.md`).
 - Base de datos y modelos de profesionales (`User`), `Disciplina` y `Paciente` (ver `docs/modelos.md`). Un profesional puede tener varias disciplinas.
-- Profesionales (usuarios) y disciplinas se administran desde una sola pantalla de listado, con los formularios de crear y editar en página aparte; no se borran (ver `docs/disciplinas-y-usuarios.md`). Cada disciplina tiene un color en hexa, que pinta sus etiquetas (va en `style=""`: única excepción a "sin CSS a mano"). Solo las usa Dirección. Los usuarios nuevos nacen con contraseña `password`: es provisorio.
+- Profesionales (usuarios) y disciplinas se administran desde una sola pantalla de listado, con los formularios de crear y editar en página aparte; no se borran (ver `docs/disciplinas-y-usuarios.md`). Cada disciplina tiene un color en hexa, que pinta sus etiquetas (va en `style=""`: única excepción a "sin CSS a mano"). Solo las usa Dirección. Al crear un usuario la contraseña viene precargada con `password` (se puede cambiar ahí y al editarlo): es provisorio.
 - Roles y permisos (ver `docs/roles.md`): Dirección carga y edita pacientes, equipos, usuarios y disciplinas, y ve todas las fichas; un Profesional ve solo los pacientes que atiende. El historial de mensajes y los archivos son solo del equipo del paciente, también para Dirección.
-- El Inicio muestra tarjetas de resumen y la tabla "Mis pacientes": los que atiende el usuario logueado (Dirección o profesional), activos por defecto, con la última actividad de cada uno y los que tienen mensajes sin leer siempre arriba. El listado administrativo (`/administracion/pacientes`) es exclusivo de Dirección, y desde ahí cada fila lleva directo a editar, no a la ficha (ver `docs/pacientes.md`).
+- El Inicio saluda con el aviso de mensajes sin leer y muestra la tabla "Mis pacientes": los que atiende el usuario logueado (Dirección o profesional), activos por defecto, con la última actividad de cada uno y los que tienen mensajes sin leer siempre arriba. El listado administrativo (`/administracion/pacientes`) es exclusivo de Dirección, y desde ahí cada fila lleva directo a editar, no a la ficha (ver `docs/pacientes.md`).
 - "Mi perfil" (`/mi-perfil`, se entra desde el nombre del usuario): cualquier usuario cambia su nombre, correo, teléfono/WhatsApp (sin cifrar) y su contraseña (ver `docs/perfil.md`).
-- Pantallas de pacientes: ficha, crear y editar, con asignación del equipo de profesionales; no se borran, se dan de baja con "Activo" (ver `docs/pacientes.md`).
-- Historial de mensajes del equipo en la ficha del paciente, con tipos (mensaje, informe, indicación, nota). Solo lo ve y escribe el equipo del paciente; no se editan ni se borran (ver `docs/mensajes.md`).
+- Pantallas de pacientes: ficha, crear y editar, con asignación del equipo de profesionales; no se borran, se dan de baja con "Activo" (ver `docs/pacientes.md`). La ficha tiene la cabecera del paciente, el historial como lo principal y, al costado, diagnóstico y archivos. El diagnóstico lo cambia cualquiera del equipo desde la ficha.
+- Historial de mensajes del equipo en la ficha del paciente, con forma de chat (lo nuevo abajo, se escribe al pie) y tipos (mensaje, informe, indicación, nota). Solo lo ve y escribe el equipo del paciente; no se editan ni se borran (ver `docs/mensajes.md`).
+- El historial es también la **bitácora**: todo cambio en los datos de un paciente ya cargado pasa por `Paciente::actualizar()`, que deja sola una entrada de tipo `actualizacion` con lo anterior y lo nuevo (cifrada). Cualquier pantalla nueva que modifique pacientes tiene que usar ese método.
 - Archivos adjuntos a los mensajes (PDF, Word, Excel, imágenes; 5 por mensaje, 10 MB), cifrados y con descarga solo para el equipo.
 - Avisos de mensajes sin leer dentro de la app: un puntito rojo en el menú y, en "Mis pacientes" del inicio, la cantidad por paciente. Se marcan leídos al abrir la ficha.
 - Zona horaria de la app: Argentina (`config/app.php`).
@@ -66,7 +67,7 @@ Datos de ejemplo (`php artisan migrate:fresh --seed`): 6 disciplinas, 8 usuarios
 
 ## Pendiente (a definir con el dueño, no construir hasta que se pida)
 
-Diseño y usabilidad: ya se rediseñaron para desktop las pantallas principales (index) y los formularios de administración. Siguen la ficha del paciente y Mi perfil, y después mobile. Sacar el login precargado, antes de usar datos reales.
+Diseño y usabilidad: ya se rediseñaron para desktop todas las pantallas (index, formularios, Mi perfil y la ficha del paciente). Sigue mobile. Sacar el login precargado, antes de usar datos reales.
 
 ## Otros centros (decisión tomada)
 

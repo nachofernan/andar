@@ -66,7 +66,7 @@ class Formulario extends Component
         $this->equipo = $paciente->profesionales->pluck('id')->map(fn ($id) => (string) $id)->all();
     }
 
-    /** Se ejecuta al enviar el formulario: valida, guarda el paciente y su equipo, y va a la ficha. */
+    /** Se ejecuta al enviar el formulario: valida, guarda el paciente y su equipo, y va a la ficha. Al editar, los cambios quedan en su historial. */
     public function guardar()
     {
         // El DNI se guarda solo con números, para que 52.118.304 y 52118304 sean el mismo.
@@ -117,11 +117,15 @@ class Formulario extends Component
             $datos[$campo] = $datos[$campo] !== '' ? $datos[$campo] : null;
         }
 
-        $paciente = $this->pacienteId ? Paciente::findOrFail($this->pacienteId) : new Paciente;
-        $paciente->fill($datos)->save();
-
-        // sync deja como equipo exactamente a los tildados: agrega los nuevos y saca los destildados.
-        $paciente->profesionales()->sync($equipo);
+        if ($this->pacienteId) {
+            // Editando: actualizar() guarda los datos y el equipo, y anota los cambios en el historial del paciente.
+            $paciente = Paciente::findOrFail($this->pacienteId);
+            $paciente->actualizar($datos, $equipo, auth()->user());
+        } else {
+            $paciente = Paciente::create($datos);
+            // sync deja como equipo exactamente a los tildados.
+            $paciente->profesionales()->sync($equipo);
+        }
 
         return $this->redirectRoute('pacientes.ver', $paciente);
     }

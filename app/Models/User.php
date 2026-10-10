@@ -47,6 +47,15 @@ class User extends Authenticatable
         return Attribute::get(fn () => $this->roles->first()?->name);
     }
 
+    /** Iniciales del usuario (de sus dos primeras palabras), para su círculo en el historial. Se usa como $usuario->iniciales. */
+    protected function iniciales(): Attribute
+    {
+        return Attribute::get(fn () => collect(preg_split('/\s+/', trim($this->name)))
+            ->take(2)
+            ->map(fn (string $palabra) => mb_strtoupper(mb_substr($palabra, 0, 1)))
+            ->implode(''));
+    }
+
     /**
      * Get the attributes that should be cast.
      *

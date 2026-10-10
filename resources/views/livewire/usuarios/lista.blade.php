@@ -1,5 +1,49 @@
-{{-- Vista de App\Livewire\Usuarios\Lista: tabla de profesionales a la izquierda y panel de disciplinas a la derecha. --}}
-<div class="grid grid-cols-[1fr_24rem] items-start gap-8">
+{{-- Vista de App\Livewire\Usuarios\Lista: tabla de disciplinas a la izquierda (angosta) y tabla de profesionales a la derecha. --}}
+<div class="grid grid-cols-[24rem_1fr] items-start gap-8">
+    {{-- Disciplinas: tabla angosta. Clic en una fila lleva a su pantalla, donde se ve y se edita. --}}
+    <div class="grid gap-4">
+        <div class="grid gap-2 rounded-[20px] bg-white p-2 shadow-[0_10px_40px] shadow-brand/15">
+            {{-- Cabecera de la tarjeta: título con la cantidad y, a la derecha, el link para cargar una nueva. --}}
+            <div class="flex items-center justify-between gap-3 px-4 pt-4">
+                <h2 class="flex items-center gap-2 font-semibold">
+                    Disciplinas
+                    <span class="rounded-full bg-brand-soft px-3 py-1 text-sm font-semibold text-brand">{{ $disciplinas->count() }}</span>
+                </h2>
+                <a href="{{ route('disciplinas.crear') }}" class="font-semibold text-brand hover:underline">+ Nueva</a>
+            </div>
+
+            <table class="w-full text-left text-sm">
+                <thead class="text-muted">
+                    <tr>
+                        <th class="px-4 py-3 font-medium">Disciplina</th>
+                        <th class="px-4 py-3 text-right font-medium">Profesionales</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($disciplinas as $item)
+                        {{-- Toda la fila lleva a editar la disciplina; el nombre además es un link común. --}}
+                        <tr wire:key="disciplina-{{ $item->id }}" onclick="window.location = '{{ route('disciplinas.editar', $item) }}'"
+                            class="cursor-pointer border-t border-line transition-colors hover:bg-brand-soft/50">
+                            <td class="px-4 py-3">
+                                {{-- Circulito con el color de la disciplina, y su nombre. --}}
+                                <a href="{{ route('disciplinas.editar', $item) }}" class="flex items-center gap-2.5 font-semibold text-brand hover:text-brand-dark">
+                                    <x-disciplina.punto :disciplina="$item" class="size-2.5" />
+                                    {{ $item->nombre }}
+                                </a>
+                            </td>
+                            {{-- Cuántos profesionales la tienen. --}}
+                            <td class="px-4 py-3 text-right text-muted">{{ $item->profesionales_count }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="2" class="border-t border-line px-4 py-6 text-center text-muted">Todavía no hay disciplinas cargadas.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     {{-- Profesionales --}}
     <div class="grid gap-4">
         <div class="grid gap-2 rounded-[20px] bg-white p-2 shadow-[0_10px_40px] shadow-brand/15">
@@ -67,50 +111,6 @@
                     @empty
                         <tr>
                             <td colspan="3" class="border-t border-line px-4 py-6 text-center text-muted">No hay profesionales para mostrar.</td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    {{-- Disciplinas: tabla angosta. Clic en una fila lleva a su pantalla, donde se ve y se edita. --}}
-    <div class="grid gap-4">
-        <div class="grid gap-2 rounded-[20px] bg-white p-2 shadow-[0_10px_40px] shadow-brand/15">
-            {{-- Cabecera de la tarjeta: título con la cantidad y, a la derecha, el link para cargar una nueva. --}}
-            <div class="flex items-center justify-between gap-3 px-4 pt-4">
-                <h2 class="flex items-center gap-2 font-semibold">
-                    Disciplinas
-                    <span class="rounded-full bg-brand-soft px-3 py-1 text-sm font-semibold text-brand">{{ $disciplinas->count() }}</span>
-                </h2>
-                <a href="{{ route('disciplinas.crear') }}" class="font-semibold text-brand hover:underline">+ Nueva</a>
-            </div>
-
-            <table class="w-full text-left text-sm">
-                <thead class="text-muted">
-                    <tr>
-                        <th class="px-4 py-3 font-medium">Disciplina</th>
-                        <th class="px-4 py-3 text-right font-medium">Profesionales</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse ($disciplinas as $item)
-                        {{-- Toda la fila lleva a editar la disciplina; el nombre además es un link común. --}}
-                        <tr wire:key="disciplina-{{ $item->id }}" onclick="window.location = '{{ route('disciplinas.editar', $item) }}'"
-                            class="cursor-pointer border-t border-line transition-colors hover:bg-brand-soft/50">
-                            <td class="px-4 py-3">
-                                {{-- Circulito con el color de la disciplina, y su nombre. --}}
-                                <a href="{{ route('disciplinas.editar', $item) }}" class="flex items-center gap-2.5 font-semibold text-brand hover:text-brand-dark">
-                                    <x-disciplina.punto :disciplina="$item" class="size-2.5" />
-                                    {{ $item->nombre }}
-                                </a>
-                            </td>
-                            {{-- Cuántos profesionales la tienen. --}}
-                            <td class="px-4 py-3 text-right text-muted">{{ $item->profesionales_count }}</td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="2" class="border-t border-line px-4 py-6 text-center text-muted">Todavía no hay disciplinas cargadas.</td>
                         </tr>
                     @endforelse
                 </tbody>

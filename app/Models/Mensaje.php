@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Http\UploadedFile;
@@ -15,6 +16,9 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 /**
  * Mensaje del historial de un paciente: lo que un profesional le escribe al resto del equipo.
  * Puede llevar archivos adjuntos. Una vez enviado no se edita ni se borra.
+ *
+ * El historial es también la bitácora del paciente: cuando alguien cambia sus datos, la app guarda sola
+ * un mensaje de tipo "actualizacion" con lo que había antes y lo que quedó (ver Paciente::actualizar).
  *
  * HasMedia + InteractsWithMedia (Spatie Media Library) le agregan el manejo de archivos:
  * cada adjunto es una fila de la tabla "media" que apunta a este mensaje.
@@ -33,7 +37,11 @@ class Mensaje extends Model implements HasMedia
         'informe' => 'Informe de evaluación',
         'indicacion' => 'Indicación',
         'nota' => 'Nota de sesión',
+        'actualizacion' => 'Actualización',
     ];
+
+    /** Tipos que escribe la app sola, no una persona: no se ofrecen ni se aceptan en el formulario de escribir. */
+    public const TIPOS_AUTOMATICOS = ['actualizacion'];
 
     // Límites de los archivos adjuntos. Para cambiarlos se tocan solo acá.
     public const MAX_ADJUNTOS = 5; // Cuántos archivos por mensaje.
@@ -52,6 +60,31 @@ class Mensaje extends Model implements HasMedia
         return [
             'cuerpo' => 'encrypted',
         ];
+    }
+
+    /** Los tipos que una persona puede elegir al escribir: todos menos los automáticos. */
+    public static function tiposParaEscribir(): array
+    {
+        return array_diff_key(self::TIPOS, array_flip(self::TIPOS_AUTOMATICOS));
+    }
+
+    /** ¿Es una entrada automática de la bitácora (un cambio en los datos del paciente)? */
+    public function esActualizacion(): bool
+    {
+        return $this->tipo === 'actualizacion';
+    }
+
+    /**
+     * Los cambios que registra una entrada de actualización. Se usa como $mensaje->cambios.
+     * En esas entradas el texto del mensaje es la lista de cambios en formato JSON (cifrada como cualquier texto).
+     * Cada cambio trae "campo" y, o bien "antes" y "ahora", o bien "texto" (para los cambios de equipo).
+     * En un mensaje común devuelve una lista vacía.
+     *
+     * @return array<int, array<string, ?string>>
+     */
+    protected function cambios(): Attribute
+    {
+        return Attribute::get(fn () => $this->esActualizacion() ? (json_decode($this->cuerpo, true) ?? []) : []);
     }
 
     /** Paciente al que pertenece el mensaje. */

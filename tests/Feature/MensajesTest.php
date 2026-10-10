@@ -97,21 +97,27 @@ class MensajesTest extends TestCase
             ->assertDontSee('Todavía no hay mensajes.');
     }
 
-    public function test_el_mensaje_de_un_profesional_con_dos_disciplinas_las_muestra_en_una_sola_etiqueta(): void
+    public function test_el_mensaje_de_un_profesional_con_dos_disciplinas_lleva_una_etiqueta_por_cada_una(): void
     {
         $paciente = $this->crearPaciente();
         $lucia = $this->crearProfesionalDelEquipo($paciente, 'Lucía Pérez');
         $lucia->disciplinas()->attach([
-            Disciplina::create(['nombre' => 'Psicología'])->id,
-            Disciplina::create(['nombre' => 'Fonoaudiología'])->id,
+            Disciplina::create(['nombre' => 'Psicología', 'color' => '#aa0000'])->id,
+            Disciplina::create(['nombre' => 'Fonoaudiología', 'color' => '#00aa00'])->id,
         ]);
         $this->crearMensaje($paciente, $lucia, 'Avanzamos con la lectura.');
 
-        // Una sola etiqueta con las dos, separadas por " · " y en orden alfabético (se cargaron al revés a propósito),
-        // entre el nombre de la autora y el texto.
-        Livewire::actingAs($lucia)
+        $html = Livewire::actingAs($lucia)
             ->test(Mensajes::class, ['paciente' => $paciente])
-            ->assertSeeInOrder(['Lucía Pérez', 'Fonoaudiología · Psicología', 'Avanzamos con la lectura.']);
+            // Entre el nombre de la autora y el texto, en orden alfabético (se cargaron al revés a propósito).
+            ->assertSeeInOrder(['Lucía Pérez', 'Fonoaudiología', 'Psicología', 'Avanzamos con la lectura.'])
+            // Ya no van juntas en una sola etiqueta.
+            ->assertDontSee('Fonoaudiología · Psicología')
+            ->html();
+
+        // Cada una es su propia etiqueta, pintada con su color.
+        $this->assertStringContainsString('style="color: #00aa00; background-color: #00aa001a">Fonoaudiología</span>', $html);
+        $this->assertStringContainsString('style="color: #aa0000; background-color: #aa00001a">Psicología</span>', $html);
     }
 
     public function test_un_profesional_del_equipo_puede_enviar_un_mensaje(): void
@@ -280,7 +286,7 @@ class MensajesTest extends TestCase
             ->assertSee('Una nota de sesión breve.');
     }
 
-    public function test_los_mensajes_se_muestran_del_mas_nuevo_al_mas_viejo(): void
+    public function test_los_mensajes_se_muestran_del_mas_viejo_al_mas_nuevo_como_en_un_chat(): void
     {
         $paciente = $this->crearPaciente();
         $lucia = $this->crearProfesionalDelEquipo($paciente);
@@ -293,7 +299,185 @@ class MensajesTest extends TestCase
 
         Livewire::actingAs($lucia)
             ->test(Mensajes::class, ['paciente' => $paciente])
-            ->assertSeeInOrder(['Mensaje más nuevo.', 'Mensaje del medio.', 'Mensaje más viejo.']);
+            ->assertSeeInOrder(['Mensaje más viejo.', 'Mensaje del medio.', 'Mensaje más nuevo.']);
+    }
+
+    public function test_dos_mensajes_de_la_misma_hora_salen_en_el_orden_en_que_se_cargaron(): void
+    {
+        $paciente = $this->crearPaciente();
+        $lucia = $this->crearProfesionalDelEquipo($paciente);
+        $this->crearMensaje($paciente, $lucia, 'Cargado primero.', 'mensaje', '2026-10-05 10:00:00');
+        $this->crearMensaje($paciente, $lucia, 'Cargado segundo.', 'mensaje', '2026-10-05 10:00:00');
+
+        Livewire::actingAs($lucia)
+            ->test(Mensajes::class, ['paciente' => $paciente])
+            ->assertSeeInOrder(['Cargado primero.', 'Cargado segundo.']);
+    }
+
+    // ---------------------------------------------------------------- Chat: separadores, hora, lado y avatar
+
+    public function test_los_mensajes_van_agrupados_por_dia_con_un_separador_arriba_de_cada_grupo(): void
+    {
+        $this->travelTo('2026-10-08 12:00:00'); // Jueves. Fecha fija, para saber qué es "hoy" y "ayer".
+
+        $paciente = $this->crearPaciente();
+        $lucia = $this->crearProfesionalDelEquipo($paciente);
+        $this->crearMensaje($paciente, $lucia, 'Del año pasado.', 'mensaje', '2025-12-24 10:00:00');
+        $this->crearMensaje($paciente, $lucia, 'Del lunes.', 'mensaje', '2026-10-05 10:00:00');
+        $this->crearMensaje($paciente, $lucia, 'De ayer.', 'mensaje', '2026-10-07 23:50:00');
+        $this->crearMensaje($paciente, $lucia, 'De hoy temprano.', 'mensaje', '2026-10-08 00:10:00');
+        $this->crearMensaje($paciente, $lucia, 'De hoy más tarde.', 'mensaje', '2026-10-08 09:30:00');
+
+        $html = Livewire::actingAs($lucia)
+            ->test(Mensajes::class, ['paciente' => $paciente])
+            ->assertSeeInOrder([
+                // De otro año: la fecha con el año.
+                '— 24 de diciembre de 2025 —', 'Del año pasado.',
+                // De este año: día de la semana, número y mes, en español.
+                '— lunes 5 de octubre —', 'Del lunes.',
+                '— ayer —', 'De ayer.',
+                '— hoy —', 'De hoy temprano.', 'De hoy más tarde.',
+            ])
+            ->html();
+
+        // Un separador por día, no por mensaje: los dos de hoy comparten el suyo.
+        $this->assertSame(4, substr_count($html, 'wire:key="dia-'));
+        $this->assertSame(1, substr_count($html, '— hoy —'));
+    }
+
+    public function test_cada_mensaje_muestra_la_hora_en_que_se_envio(): void
+    {
+        $paciente = $this->crearPaciente();
+        $lucia = $this->crearProfesionalDelEquipo($paciente, 'Lucía Pérez');
+        $this->crearMensaje($paciente, $lucia, 'A la mañana.', 'mensaje', '2026-10-05 09:05:00');
+        $this->crearMensaje($paciente, $lucia, 'A la tarde.', 'mensaje', '2026-10-05 18:40:00');
+
+        // Hora y minutos, en 24 horas. La fecha ya la dice el separador del día.
+        Livewire::actingAs($lucia)
+            ->test(Mensajes::class, ['paciente' => $paciente])
+            ->assertSeeInOrder(['Lucía Pérez', '>09:05</span>', 'A la mañana.', '>18:40</span>', 'A la tarde.'], false);
+    }
+
+    public function test_el_tipo_se_etiqueta_solo_cuando_no_es_un_mensaje_comun(): void
+    {
+        $paciente = $this->crearPaciente();
+        $lucia = $this->crearProfesionalDelEquipo($paciente);
+        $this->crearMensaje($paciente, $lucia, 'Un mensaje común.', 'mensaje');
+        $this->crearMensaje($paciente, $lucia, 'Una nota.', 'nota');
+
+        $html = Livewire::actingAs($lucia)
+            ->test(Mensajes::class, ['paciente' => $paciente])
+            ->html();
+
+        // La etiqueta del tipo es la única verde (text-accent) del historial: la lleva la nota y no el mensaje común.
+        $this->assertStringContainsString('text-accent">Nota de sesión</span>', $html);
+        $this->assertStringNotContainsString('text-accent">Mensaje</span>', $html);
+    }
+
+    public function test_mis_mensajes_van_a_la_derecha_y_los_de_los_demas_a_la_izquierda(): void
+    {
+        $paciente = $this->crearPaciente();
+        $lucia = $this->crearProfesionalDelEquipo($paciente, 'Lucía Pérez');
+        $marta = $this->crearProfesionalDelEquipo($paciente, 'Marta Díaz');
+        $mio = $this->crearMensaje($paciente, $lucia, 'Lo escribí yo.');
+        $ajeno = $this->crearMensaje($paciente, $marta, 'Lo escribió Marta.');
+
+        // "flex-row-reverse" es la clase que da vuelta el renglón (avatar a la derecha). La lleva solo el propio.
+        $renglon = fn (Mensaje $mensaje) => '/wire:key="mensaje-'.$mensaje->id.'" class="[^"]*flex-row-reverse/';
+
+        $html = Livewire::actingAs($lucia)->test(Mensajes::class, ['paciente' => $paciente])->html();
+        $this->assertMatchesRegularExpression($renglon($mio), $html);
+        $this->assertDoesNotMatchRegularExpression($renglon($ajeno), $html);
+
+        // Depende de quién mira: para Marta es al revés.
+        $html = Livewire::actingAs($marta)->test(Mensajes::class, ['paciente' => $paciente])->html();
+        $this->assertMatchesRegularExpression($renglon($ajeno), $html);
+        $this->assertDoesNotMatchRegularExpression($renglon($mio), $html);
+    }
+
+    public function test_cada_mensaje_lleva_el_avatar_del_autor_con_sus_iniciales_y_el_color_de_su_primera_disciplina(): void
+    {
+        $paciente = $this->crearPaciente();
+        $lucia = $this->crearProfesionalDelEquipo($paciente, 'Lucía Pérez');
+        $lucia->disciplinas()->attach([
+            Disciplina::create(['nombre' => 'Psicología', 'color' => '#aa0000'])->id,
+            Disciplina::create(['nombre' => 'Fonoaudiología', 'color' => '#00aa00'])->id,
+        ]);
+        $marta = $this->crearProfesionalDelEquipo($paciente, 'Marta Díaz'); // Sin disciplina.
+        $this->crearMensaje($paciente, $lucia, 'De Lucía.');
+        $this->crearMensaje($paciente, $marta, 'De Marta.');
+
+        $html = Livewire::actingAs($lucia)->test(Mensajes::class, ['paciente' => $paciente])->html();
+
+        // El círculo de Lucía: el color de su primera disciplina por orden alfabético (Fonoaudiología).
+        $this->assertMatchesRegularExpression('/style="background-color: #00aa00"\s+title="Lucía Pérez">LP<\/span>/u', $html);
+        // Marta no tiene ninguna: lleva el violeta de la app.
+        $this->assertMatchesRegularExpression('/style="background-color: '.Disciplina::COLOR_INICIAL.'"\s+title="Marta Díaz">MD<\/span>/u', $html);
+    }
+
+    public function test_las_iniciales_del_usuario_salen_de_sus_dos_primeras_palabras(): void
+    {
+        $iniciales = fn (string $nombre) => (new User(['name' => $nombre]))->iniciales;
+
+        $this->assertSame('LP', $iniciales('Lucía Pérez'));
+        // Más de dos palabras: solo las dos primeras.
+        $this->assertSame('MJ', $iniciales('María José Gómez'));
+        // Una sola palabra: una sola letra.
+        $this->assertSame('C', $iniciales('Catalina'));
+        // En minúscula, con tilde y con espacios de más: letra entera, en mayúscula.
+        $this->assertSame('ÁD', $iniciales('  ángela   díaz '));
+    }
+
+    // ---------------------------------------------------------------- Tipos automáticos
+
+    public function test_los_tipos_para_escribir_son_todos_menos_los_automaticos(): void
+    {
+        $this->assertArrayHasKey('actualizacion', Mensaje::TIPOS);
+        $this->assertSame(['actualizacion'], Mensaje::TIPOS_AUTOMATICOS);
+        // Con sus nombres para mostrar, tal como están en TIPOS.
+        $this->assertSame([
+            'mensaje' => 'Mensaje',
+            'informe' => 'Informe de evaluación',
+            'indicacion' => 'Indicación',
+            'nota' => 'Nota de sesión',
+        ], Mensaje::tiposParaEscribir());
+    }
+
+    public function test_el_tipo_actualizacion_no_se_acepta_al_escribir_un_mensaje(): void
+    {
+        $paciente = $this->crearPaciente();
+
+        // Es un tipo válido del historial, pero lo pone la app sola: mandarlo desde el navegador no alcanza
+        // para fabricar una entrada de bitácora a mano.
+        Livewire::actingAs($this->crearProfesionalDelEquipo($paciente))
+            ->test(Mensajes::class, ['paciente' => $paciente])
+            ->set('cuerpo', '[{"campo":"Diagnóstico","antes":"Uno","ahora":"Otro"}]')
+            ->set('tipo', 'actualizacion')
+            ->call('enviar')
+            ->assertHasErrors(['tipo' => 'in'])
+            ->assertSeeHtml('Elegí un tipo de la lista.');
+
+        $this->assertDatabaseCount('mensajes', 0);
+    }
+
+    public function test_actualizacion_no_esta_en_el_desplegable_de_escribir_pero_si_en_los_filtros(): void
+    {
+        $paciente = $this->crearPaciente();
+
+        $html = Livewire::actingAs($this->crearProfesionalDelEquipo($paciente))
+            ->test(Mensajes::class, ['paciente' => $paciente])
+            ->html();
+
+        // El desplegable ofrece los cuatro tipos que escribe una persona.
+        foreach (['mensaje', 'informe', 'indicacion', 'nota'] as $tipo) {
+            $this->assertStringContainsString('<option value="'.$tipo.'">', $html);
+        }
+        $this->assertStringNotContainsString('<option value="actualizacion">', $html);
+
+        // En los filtros sí está, junto a "Todos" y los demás: sirve para ver solo la bitácora.
+        foreach (['', 'mensaje', 'informe', 'indicacion', 'nota', 'actualizacion'] as $tipo) {
+            $this->assertStringContainsString('wire:key="filtro-'.$tipo.'"', $html);
+        }
     }
 
     // ---------------------------------------------------------------- Modelo
